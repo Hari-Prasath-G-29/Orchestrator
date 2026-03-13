@@ -1,0 +1,335 @@
+/* softer pill for right-side metric on Subject Lines */
+
+.ihub-pillState.soft {
+
+  border-radius: 16px;
+
+  padding: 4px 10px;
+
+  font-weight: 600;
+
+  background: rgba(30, 185, 90, 0.1);
+
+  color: #1eb95a;
+
+  border: 1px solid rgba(30, 185, 90, 0.2);
+
+}
+
+ 
+
+/* info card strip under tabs */
+
+.ihub-infoCard {
+
+  background: #f1f7ff;
+
+  border: 1px solid #e0ecff;
+
+  border-radius: 8px;
+
+  padding: 14px 16px;
+
+  margin-bottom: 10px;
+
+}
+
+.ihub-infoTitle {
+
+  font-weight: 600;
+
+  margin-bottom: 4px;
+
+  color: #2a5bd7;
+
+}
+
+.ihub-infoText {
+
+  color: #5f6b7a;
+
+  font-size: 0.95rem;
+
+}
+
+ 
+
+/* footer generate button row */
+
+.footerAction {
+
+  justify-content: center;
+
+  border-top: 1px solid #eef2f7;
+
+}
+
+.ihub-ghostBtn {
+
+  background: #fff;
+
+  border: 1px dashed #c8d1dc;
+
+  border-radius: 8px;
+
+  padding: 10px 14px;
+
+  color: #344054;
+
+  cursor: pointer;
+
+}
+
+.ihub-ghostBtn:hover {
+
+  background: #f9fafb;
+
+}
+
+ 
+
+/* active tab look (if not already in your CSS) */
+
+.ihub-tab.active {
+
+  background: #ffffff;
+
+  border-bottom: 2px solid #2a5bd7;
+
+  color: #2a5bd7;
+
+  font-weight: 600;
+
+}
+
+ /* ADD-ONS FOR SEND TIMING & SEGMENTS */
+
+.flex-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ihub-rowIcon {
+  color: #667085;
+  font-size: 1rem;
+}
+
+.ihub-pillState.soft.grey {
+  background: #f2f4f7;
+  color: #344054;
+  border: 1px solid #eaecf0;
+}
+
+/* Purple Theme for Segments Header */
+.ihub-infoCard.purple-theme {
+  background: #F9F5FF;
+  border: 1px solid #E9D7FE;
+}
+
+.ihub-infoCard.purple-theme .ihub-infoTitle {
+  color: #6941C6;
+  margin-bottom: 0;
+}
+
+/* Trend Layout for Segments */
+.ihub-trend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #667085;
+  margin-top: 4px;
+}
+
+.trend-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.trend-box.blue {
+  background: #2a5bd7;
+  color: white;
+}
+
+.trend-box.white {
+  background: white;
+  border: 1px solid #d0d5dd;
+  color: #2a5bd7;
+}
+
+/* Success Green Pill */
+.ihub-pillState.soft.success {
+  background: #ECFDF3;
+  color: #027A48;
+  border: 1px solid #ABEFC6;
+}
+
+.ihub-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 120px; /* Adjust based on your layout */
+  padding: 10px;
+  background-color: #f0fdf4; /* Very light green background */
+  border: 1px solid #bbf7d0; /* Soft green border */
+  border-radius: 12px;
+  text-align: center;
+}
+
+.ihub-kpiIcon {
+  color: #166534; /* Darker green for the icon */
+  margin-bottom: 10px;
+}
+
+.ihub-kpiValue {
+  font-size: 1.5rem;
+  font-weight: 650;
+  color: #064e3b; /* Deep green for the percentage */
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.ihub-kpiLabel {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #15803d; /* Mid-tone green for the label */
+}
+
+.ihub-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 20px;
+  background-color: #f0f7ff; /* Very light blue background */
+  border: 1px solid #cce3ff; /* Soft blue border */
+  border-radius: 12px;
+  text-align: center;
+}
+
+/* Specific styling for the Blue/Info theme */
+.ihub-kpiIcon.info {
+  color: #2563eb; /* Primary blue icon color */
+  margin-bottom: 12px;
+}
+
+.ihub-kpiValue.info {
+  font-size: 1.5rem;
+  font-weight: 6500;
+  color: #1e40af; /* Deep blue for value */
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.ihub-kpiLabel {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #80cc79; /* Neutral gray for the label */
+}
+
+/* Base KPI styles (reused) */
+.ihub-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 24px 12px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+/* Specific Purple Theme for Campaigns */
+.ihub-kpi.purple {
+  background-color: #f9f5ff; /* Very light purple/lavender */
+  border: 1px solid #e9d7fe; /* Soft purple border */
+}
+
+.ihub-kpi.purple .ihub-kpiIcon {
+  color: #7f56d9; /* Medium purple icon */
+  margin-bottom: 12px;
+}
+
+.ihub-kpi.purple .ihub-kpiValue {
+  font-size: 1.5rem;
+  font-weight: 650;
+  color: #6941c6; /* Deep purple value */
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.ihub-kpi.purple .ihub-kpiLabel {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #7f56d9; /* Purple label text */
+}
+
+/* Base KPI styles (ensure these are present) */
+.ihub-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 24px 12px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+/* Specific Orange/Warn Theme for Conversion Rate */
+.ihub-kpi.warn {
+  background-color: #fff7ed; /* Very light orange background */
+  border: 1px solid #ffedd5; /* Soft orange border */
+}
+
+.ihub-kpi.warn .ihub-kpiIcon {
+  color: #f97316; /* Bright orange icon */
+  margin-bottom: 12px;
+}
+
+.ihub-kpi.warn .ihub-kpiValue {
+  font-size: 1.5rem;
+  font-weight: 6500;
+  color: #9a3412; /* Deep orange/brown for readability */
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.ihub-kpi.warn .ihub-kpiLabel {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #ea580c; /* Orange label text */
+}
+
+.ihub-ciTitle {
+  display: flex;
+  align-items: flex-start; /* Aligns icon with the top line of text */
+  gap: 12px;               /* Space between icon and text block */
+  margin-bottom: 20px;
+}
+
+.ihub-ciIcon.main-green {
+  color: #10b981;          /* The vibrant green from your screenshot */
+  margin-top: 4px;         /* Fine-tuning vertical alignment with the title */
+}
+
+.ihub-ciName {
+  font-size: 1.5rem;       /* Larger, bold heading */
+  font-weight: 700;
+  color: #0f172a;          /* Dark navy/black for the title */
+  line-height: 1.2;
+}
+
+.ihub-ciSubtitle {
+  font-size: 0.95rem;
+  color: #64748b;          /* Muted slate gray for the subtitle */
+  margin-top: 2px;
+}

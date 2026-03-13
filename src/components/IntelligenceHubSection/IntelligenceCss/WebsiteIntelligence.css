@@ -1,0 +1,120 @@
+/* =========================================================
+   EXACT REPLICA - WEBSITE INTELLIGENCE
+   ========================================================= */
+
+.ihub-ciCard-exact {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* Header */
+.ihub-header-exact {
+  margin-bottom: 20px;
+}
+.ihub-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.ihub-globe-icon {
+  width: 22px;
+  height: 22px;
+  color: #2563eb; /* Exact blue from screenshot */
+}
+.ihub-title-row h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.ihub-subtitle-exact {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* KPI Cards Grid */
+.ihub-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.ihub-kpi-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+.kpi-icon {
+  width: 20px;
+  height: 20px;
+  margin-bottom: 8px;
+}
+.kpi-val {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+.kpi-label {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* Exact KPI Colors */
+.box-blue { background: #f0f6ff; border-color: #dbeafe; }
+.box-blue .kpi-icon, .box-blue .kpi-val { color: #2563eb; }
+.box-blue .kpi-label { color: #60a5fa; }
+
+.box-green { background: #f0fdf4; border-color: #dcfce7; }
+.box-green .kpi-icon, .box-green .kpi-val { color: #16a34a; }
+.box-green .kpi-label { color: #4ade80; }
+
+.box-purple { background: #faf5ff; border-color: #f3e8ff; }
+.box-purple .kpi-icon, .box-purple .kpi-val { color: #9333ea; }
+.box-purple .kpi-label { color: #c084fc; }
+
+.box-orange { background: #fff7ed; border-color: #ffedd5; }
+.box-orange .kpi-icon, .box-orange .kpi-val { color: #d97706; }
+.box-orange .kpi-label { color: #fb923c; }
+
+/* Horizontal Tabs Nav */
+.ihub-tabs-wrapper {
+  display: flex;
+  flex-direction: row; /* Forces horizontal */
+  align-items: center;
+  background: #f8fafc;
+  padding: 6px;
+  border-radius: 8px;
+  gap: 4px;
+}
+.ihub-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 10px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 6px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+.ihub-tab-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.ihub-tab-btn:hover:not(.active) {
+  color: #0f172a;
+}

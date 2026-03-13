@@ -1,0 +1,201 @@
+:root {
+  --peach-bg: #fff5eb;
+  --peach-text: #e67e22;
+  --sky-bg: #f0f7ff;
+  --sky-text: #3498db;
+  --mint-bg: #f0fff4;
+  --mint-text: #27ae60;
+  --purple-bg: #f5f3ff;
+  --purple-text: #8e44ad;
+  --chip-bg: #59b296;
+}
+
+.ihub-intelCard {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  padding: 24px;
+  max-width: 900px;
+  margin: 20px auto;
+  color: #333;
+}
+
+/* Header Section */
+.ihub-intelHead {
+  margin-bottom: 24px;
+}
+
+.ihub-intelTitle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ihub-header-icon {
+  font-size: 20px;
+  color: #e67e22;
+}
+
+.ihub-intelName {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.ihub-intelSubtitle {
+  font-size: 0.85rem;
+  color: #7f8c8d;
+}
+
+/* Mini Stats Row */
+.ihub-miniRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.ihub-mini {
+  flex: 1;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.ihub-miniValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.ihub-miniLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* Color Variants for Stats */
+.peach { background-color: var(--peach-bg); color: var(--peach-text); border-color: #ffe0c2; }
+.sky { background-color: var(--sky-bg); color: var(--sky-text); border-color: #d6eaff; }
+.mint { background-color: var(--mint-bg); color: var(--mint-text); border-color: #d1f7d6; }
+.purple { background-color: var(--purple-bg); color: var(--purple-text); border-color: #e9e2ff; }
+
+/* Tabs */
+.ihub-tabs-container {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+
+.ihub-tabs {
+  display: flex;
+  justify-content: space-between;
+}
+
+.ihub-tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: #7f8c8d;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 6px;
+}
+
+.ihub-tab.active {
+  background: #ffffff;
+  color: #2c3e50;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Activity List */
+.ihub-softHeader {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ihub-loc-icon {
+  color: #e67e22;
+}
+
+.ihub-activityRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f2f6;
+}
+
+.ihub-activityRow:last-child {
+  border-bottom: none;
+}
+
+.ihub-activityName {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.ihub-activitySub {
+  font-size: 0.75rem;
+  color: #95a5a6;
+}
+
+.ihub-activityRight {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.ihub-qty {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.ihub-chip.green {
+  background-color: var(--chip-bg);
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 100px;
+  text-align: center;
+}
+
+.ihub-intelTitle {
+  display: flex;
+  align-items: flex-start; /* Aligns icon with the top line of text */
+  gap: 12px;               /* Space between icon and text */
+  margin-bottom: 24px;
+}
+
+.ihub-header-icon.rep-orange {
+  color: #f97316;          /* The specific orange from your screenshot */
+  margin-top: 4px;         /* Centers the icon vertically with the header text */
+  flex-shrink: 0;          /* Prevents the icon from squishing */
+}
+
+.ihub-intelName {
+  font-size: 1.5rem;       /* Bold, prominent title */
+  font-weight: 700;
+  color: #0f172a;          /* Dark navy/black text */
+  line-height: 1.2;
+}
+
+.ihub-intelSubtitle {
+  font-size: 0.95rem;
+  color: #64748b;          /* Muted slate gray for subtitle */
+  margin-top: 2px;
+}
