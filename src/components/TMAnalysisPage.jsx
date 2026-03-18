@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import "./css/Translationhub.css";
 
 const TMAnalysis = () => {
   const { state } = useLocation();

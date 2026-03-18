@@ -5,7 +5,8 @@ import { jsPDF } from "jspdf";
 import "./css/Cultural.css";
 import {  ArrowLeft,
   Save, ArrowRight, Upload, FileText, CheckCircle2, Maximize2, BarChart3, FileDown, Brain,
-  Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock, CheckCircle, TrendingUp, Languages, Loader2, Sparkles, Lock } from 'lucide-react';
+  Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock, CheckCircle, TrendingUp, Languages,
+   Loader2, Sparkles, Lock , Box, MessageSquare, Globe, Shield, CheckCircle as CheckCircleIcon} from 'lucide-react';
 import { getProject, updateProjectMeta, markPhaseComplete, computeProgress } from '../lib/progressStore';
 import { usePhaseNavigation } from "./PhaseNav.jsx";
 
@@ -1629,7 +1630,8 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
           aria-label={`Open ${p.name}`}
           onClick={() => handlePhaseClick(p.name)}
         >
-          <span className={`tm-phase-icon ${p.iconClass}`} />
+          {/* <span className={`tm-phase-icon ${p.iconClass}`} /> */}
+          <span className={`tm-phase-icon ${p.color || ''}`}>{p.icon}</span>
           <span className="tm-phase-text">
             <span className="tm-phase-title">{p.name}</span>
             <span className="tm-phase-sub">{p.sub}</span>
@@ -2512,15 +2514,63 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
   );
 }
 
-/* Sidebar phases */
 const SIDEBAR_PHASES = [
-  { id: 'P1', name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
-  { id: 'P2', name: "Smart TM Translation", sub: "AI-powered translation", status: "done", iconClass: "icon-translation" },
-  { id: 'P3', name: "Cultural Intelligence", sub: "Cultural adaptation", status: "active", iconClass: "icon-culture" },
-  { id: 'P4', name: "Regulatory Compliance", sub: "Compliance validation", status: "todo", iconClass: "icon-compliance" },
-  { id: 'P5', name: "Quality Intelligence", sub: "Quality assurance", status: "todo", iconClass: "icon-quality" },
-  { id: 'P6', name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
-  { id: 'P7', name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
+  {
+    id: 'P1',
+    name: "Global Context Capture",
+    sub: "Source content analysis",
+    status: "done",
+    icon: <Globe size={18} />,
+    color: 'is-blue'
+  },
+  {
+    id: 'P2',
+    name: "Smart TM Translation",
+    sub: "AI-powered translation",
+    status: "done",
+    icon: <Languages size={18} />,
+    color: 'is-purple'
+  },
+  {
+    id: 'P3',
+    name: "Cultural Intelligence",
+    sub: "Cultural adaptation",
+    status: "active",
+    icon: <MessageSquare size={18} />,
+    color: 'is-green'
+  },
+  {
+    id: 'P4',
+    name: "Regulatory Compliance",
+    sub: "Compliance validation",
+    status: "todo",
+    icon: <Shield size={18} />,
+    color: 'is-orange'
+  },
+  {
+    id: 'P5',
+    name: "Quality Intelligence",
+    sub: "Quality assurance",
+    status: "todo",
+    icon: <CheckCircleIcon size={18} />,
+    color: 'is-cyan'
+  },
+  {
+    id: 'P6',
+    name: "DAM Integration",
+    sub: "Asset packaging",
+    status: "todo",
+    icon: <Box size={18} />,
+    color: 'is-pink'
+  },
+  {
+    id: 'P7',
+    name: "Integration Lineage",
+    sub: "System integration",
+    status: "todo",
+    icon: <MessageSquare size={18} />,
+    color: 'is-violet'
+  },
 ];
 
 /** ========= Simple Reusable Modal ========= */

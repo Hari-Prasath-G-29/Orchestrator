@@ -2089,3 +2089,13 @@ color: #0f172a;
 .tm-accordion-trigger * {
   pointer-events: none;  /* keep button behavior consistent */
 }
+
+
+/* Color tints (feel free to adjust to match your palette) */
+.tm-phase-icon.is-blue    { color: #1D4ED8; background: #EFF6FF; }
+.tm-phase-icon.is-purple  { color: #7C3AED; background: #F5F3FF; }
+.tm-phase-icon.is-green   { color: #059669; background: #ECFDF5; }
+.tm-phase-icon.is-orange  { color: #EA580C; background: #FFF7ED; }
+.tm-phase-icon.is-cyan    { color: #0284C7; background: #ECFEFF; }
+.tm-phase-icon.is-pink    { color: #DB2777; background: #FDF2F8; }
+.tm-phase-icon.is-violet  { color: #6D28D9; background: #F5F3FF; }

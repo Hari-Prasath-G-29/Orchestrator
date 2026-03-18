@@ -927,3 +927,13 @@ button:focus-visible {
   font-weight: 500;
   display: inline-block;
 }
+
+.btn {
+  display: inline-flex;
+  align-items: center;     /* vertical centering */
+  justify-content: center; /* horizontal centering */
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;          /* remove extra vertical gap */
+}

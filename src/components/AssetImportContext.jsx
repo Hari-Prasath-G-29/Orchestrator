@@ -462,13 +462,13 @@ console.log(uniqueLangs,firstLang)
           onChange={(e) => setBaseProjectName(e.target.value)}
           placeholder="Enter project name..."
           className="form-control flex-grow-1"
-          style={{ maxWidth: '60vw' }}  // increase box size; adjust as needed
+          style={{ maxWidth: '50vw' }}  // increase box size; adjust as needed
         />
 
         {/* Save button on far right */}
         <button
           type="button"
-          className="btn btn-outline-primary ms-auto d-inline-flex align-items-center"
+          className="btn  ms-auto d-inline-flex align-items-center"
           onClick={() => setIsEditingName(false)}
         >
           <CheckCircle size={16} className="me-1" />
@@ -725,7 +725,7 @@ console.log(uniqueLangs,firstLang)
             <Typography variant="caption" color="textSecondary" className="mb-2 d-block">
               Based on source asset type: {type}
             </Typography>
-            <Badge variant="secondary" className="px-4 py-2 text-base">
+            <Badge variant="secondary" className="px-4 py-2 text-base" style={{ color: "#070a0c"}}>
             📧 {type}
           </Badge>
             {/* <Box>

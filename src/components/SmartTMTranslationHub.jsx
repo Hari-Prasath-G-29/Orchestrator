@@ -2,9 +2,16 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // import "../App.css";
 import "./css/Translationhub.css";
-import {  ArrowLeft,
-  Save, ArrowRight, Upload, FileText, CheckCircle2, Maximize2, BarChart3,
-  Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock, CheckCircle, TrendingUp, Languages, Loader2, Sparkles, Lock } from 'lucide-react';
+// import {  ArrowLeft,
+//   Save, ArrowRight, Upload, FileText, CheckCircle2, Maximize2, BarChart3,
+//   Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock, CheckCircle, 
+//   TrendingUp, Languages, Loader2, Sparkles, Lock } from 'lucide-react'; 
+import {
+  ArrowLeft, Save, ArrowRight, FileText, CheckCircle2, Maximize2, BarChart3,
+  Minimize2, Edit3, Unlock, CheckCircle, TrendingUp, Languages, Loader2, Sparkles, Lock,
+  Globe, Shield, CheckCircle as CheckCircleIcon, Box, MessageSquare
+} from 'lucide-react';
+
 import { getProject, updateProjectMeta, markPhaseComplete, setP2DraftGenerated, computeProgress } from '../lib/progressStore';
 import { usePhaseNavigation } from "./PhaseNav.jsx";
 
@@ -14,14 +21,73 @@ import TMLeverageOverview from "./TMLeverageOverview";
 
 
 /* Sidebar phases (original list retained) */
+// const SIDEBAR_PHASES = [
+//   { id: 'P1', name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
+//   { id: 'P2', name: "Smart TM Translation", sub: "AI-powered translation", status: "active", iconClass: "icon-translation" },
+//   { id: 'P3', name: "Cultural Intelligence", sub: "Cultural adaptation", status: "todo", iconClass: "icon-culture" },
+//   { id: 'P4', name: "Regulatory Compliance", sub: "Compliance validation", status: "todo", iconClass: "icon-compliance" },
+//   { id: 'P5', name: "Quality Intelligence", sub: "Quality assurance", status: "todo", iconClass: "icon-quality" },
+//   { id: 'P6', name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
+//   { id: 'P7', name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
+// ];
+
 const SIDEBAR_PHASES = [
-  { id: 'P1', name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
-  { id: 'P2', name: "Smart TM Translation", sub: "AI-powered translation", status: "active", iconClass: "icon-translation" },
-  { id: 'P3', name: "Cultural Intelligence", sub: "Cultural adaptation", status: "todo", iconClass: "icon-culture" },
-  { id: 'P4', name: "Regulatory Compliance", sub: "Compliance validation", status: "todo", iconClass: "icon-compliance" },
-  { id: 'P5', name: "Quality Intelligence", sub: "Quality assurance", status: "todo", iconClass: "icon-quality" },
-  { id: 'P6', name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
-  { id: 'P7', name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
+  {
+    id: 'P1',
+    name: "Global Context Capture",
+    sub: "Source content analysis",
+    status: "done",
+    icon: <Globe size={18} />,
+    color: 'is-blue'
+  },
+  {
+    id: 'P2',
+    name: "Smart TM Translation",
+    sub: "AI-powered translation",
+    status: "active",
+    icon: <Languages size={18} />,
+    color: 'is-purple'
+  },
+  {
+    id: 'P3',
+    name: "Cultural Intelligence",
+    sub: "Cultural adaptation",
+    status: "todo",
+    icon: <MessageSquare size={18} />,
+    color: 'is-green'
+  },
+  {
+    id: 'P4',
+    name: "Regulatory Compliance",
+    sub: "Compliance validation",
+    status: "todo",
+    icon: <Shield size={18} />,
+    color: 'is-orange'
+  },
+  {
+    id: 'P5',
+    name: "Quality Intelligence",
+    sub: "Quality assurance",
+    status: "todo",
+    icon: <CheckCircleIcon size={18} />,
+    color: 'is-cyan'
+  },
+  {
+    id: 'P6',
+    name: "DAM Integration",
+    sub: "Asset packaging",
+    status: "todo",
+    icon: <Box size={18} />,
+    color: 'is-pink'
+  },
+  {
+    id: 'P7',
+    name: "Integration Lineage",
+    sub: "System integration",
+    status: "todo",
+    icon: <MessageSquare size={18} />,
+    color: 'is-violet'
+  },
 ];
 
 /* Env helpers */
@@ -840,6 +906,7 @@ const rawCandidate =
   const [isBulkTranslating, setIsBulkTranslating] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0, failed: 0 });
 
+
   // ✅ NEW: AUTO-SAVE REAL-TIME TRANSLATIONS & LANGUAGE TO DATABASE
   useEffect(() => {
     if (!projectId || Object.keys(segOverrides).length === 0 || isBulkTranslating) return;
@@ -885,17 +952,16 @@ const allSegmentsCompleted = useMemo(() => {
   });
 }, [segments, segOverrides]);
 // ✅ NEW: Auto-Unlock the Draft Tab ONLY when translations are 100% complete
-  useEffect(() => {
-    if (allSegmentsCompleted) {
-      setIsDraftUnlocked(true);
-    } else {
-      setIsDraftUnlocked(false);
-      // If the user deletes a translation while viewing the draft, kick them back to the workspace
-      if (activeTab === "draft") {
-        setActiveTab("workspace");
-      }
-    }
-  }, [allSegmentsCompleted, activeTab]);
+  // useEffect(() => {
+  //   if (allSegmentsCompleted) {
+  //     setIsDraftUnlocked(true);
+  //   } else {
+  //     setIsDraftUnlocked(false);
+  //     if (activeTab === "draft") {
+  //       setActiveTab("workspace");
+  //     }
+  //   }
+  // }, [allSegmentsCompleted, activeTab]);
 
 /** Show success banner only when all complete AND draft is still locked */
 useEffect(() => {
@@ -1589,7 +1655,8 @@ const handleGenerateDraftTranslation = () => {
                 aria-label={`Open ${p.name}`}
                 onClick={() => gotoPhase(p.id)}
               >
-                <span className={`tm-phase-icon ${p.iconClass}`} />
+                {/* <span className={`tm-phase-icon ${p.iconClass}`} /> */}
+                <span className={`tm-phase-icon ${p.color || ''}`}>{p.icon}</span>
                 <span className="tm-phase-text">
                   <span className="tm-phase-title">{p.name}</span>
                   <span className="tm-phase-sub">{p.sub}</span>
@@ -1685,8 +1752,10 @@ const handleGenerateDraftTranslation = () => {
             onClick={() => {
               if (isDraftUnlocked) setActiveTab("draft");
             }}
-            style={!isDraftUnlocked ? { opacity: 0.5, cursor: "not-allowed" } : {}}
-            title={!isDraftUnlocked ? "Please translate all segments to unlock the Draft" : "View compiled draft"}
+            disabled={!isDraftUnlocked}
+  title={isDraftUnlocked ? 'Open Draft Translation' : 'Generate Draft Translation to open'}
+            // style={!isDraftUnlocked ? { opacity: 0.5, cursor: "not-allowed" } : {}}
+            // title={!isDraftUnlocked ? "Please translate all segments to unlock the Draft" : "View compiled draft"}
           >
             <CheckCircle2 size={16} />
             Draft Translation

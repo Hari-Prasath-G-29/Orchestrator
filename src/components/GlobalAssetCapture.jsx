@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import "../App.css";
 import {  ArrowLeft,
   Save, ArrowRight, Upload, FileText, CheckCircle2, Maximize2,
-  Minimize2, Users, Stethoscope, Edit2, Plus, X, Pill, Unlock } from 'lucide-react';
+  Minimize2, Users, Stethoscope, Edit2, Plus, X, Pill, Unlock, Box, MessageSquare, Globe, Languages, Shield, CheckCircle as CheckCircleIcon} from 'lucide-react';
 import { Button } from "@mui/material";
 import { updateProjectMeta, markPhaseComplete, getProject, resetP2DraftState } from '../lib/progressStore';
 import { usePhaseNavigation } from "./PhaseNav.jsx";
@@ -163,54 +163,114 @@ React.useEffect(() => {
 //   []
 // );
 
+const phases = [
+  {
+    id: 'P1',
+    name: "Global Context Capture",
+    sub: "Source content analysis",
+    status: "active",
+    icon: <Globe size={18} />,
+    color: 'is-blue'
+  },
+  {
+    id: 'P2',
+    name: "Smart TM Translation",
+    sub: "AI-powered translation",
+    status: "todo",
+    icon: <Languages size={18} />,
+    color: 'is-purple'
+  },
+  {
+    id: 'P3',
+    name: "Cultural Intelligence",
+    sub: "Cultural adaptation",
+    status: "todo",
+    icon: <MessageSquare size={18} />,
+    color: 'is-green'
+  },
+  {
+    id: 'P4',
+    name: "Regulatory Compliance",
+    sub: "Compliance validation",
+    status: "todo",
+    icon: <Shield size={18} />,
+    color: 'is-orange'
+  },
+  {
+    id: 'P5',
+    name: "Quality Intelligence",
+    sub: "Quality assurance",
+    status: "todo",
+    icon: <CheckCircleIcon size={18} />,
+    color: 'is-cyan'
+  },
+  {
+    id: 'P6',
+    name: "DAM Integration",
+    sub: "Asset packaging",
+    status: "todo",
+    icon: <Box size={18} />,
+    color: 'is-pink'
+  },
+  {
+    id: 'P7',
+    name: "Integration Lineage",
+    sub: "System integration",
+    status: "todo",
+    icon: <MessageSquare size={18} />,
+    color: 'is-violet'
+  },
+];
+
+
  // Sidebar Phases (unchanged)
-  const phases = useMemo(
-    () => [
-      {
-        id: "P1",
-        name: "Global Context Capture",
-        sub: "Source content analysis",
-        status: "active",
-      },
-      {
-        id: "P2",
-        name: "Smart TM Translation",
-        sub: "AI-powered translation",
-        status: "todo",
-      },
-      {
-        id: "P3",
-        name: "Cultural Intelligence",
-        sub: "Cultural adaptation",
-        status: "todo",
-      },
-      {
-        id: "P4",
-        name: "Regulatory Compliance",
-        sub: "Compliance validation",
-        status: "todo",
-      },
-      {
-        id: "P5",
-        name: "Quality Intelligence",
-        sub: "Quality assurance",
-        status: "todo",
-      },
-      {
-        id: "P6",
-        name: "DAM Integration",
-        sub: "Asset packaging",
-        status: "todo",
-      },
-      {
-        id: "P7",
-        name: "Integration Lineage",
-        sub: "System integration",
-        status: "todo",
-      },
-    ],
-    [],
-  );
+  // const phases = useMemo(
+  //   () => [
+  //     {
+  //       id: "P1",
+  //       name: "Global Context Capture",
+  //       sub: "Source content analysis",
+  //       status: "active",
+  //     },
+  //     {
+  //       id: "P2",
+  //       name: "Smart TM Translation",
+  //       sub: "AI-powered translation",
+  //       status: "todo",
+  //     },
+  //     {
+  //       id: "P3",
+  //       name: "Cultural Intelligence",
+  //       sub: "Cultural adaptation",
+  //       status: "todo",
+  //     },
+  //     {
+  //       id: "P4",
+  //       name: "Regulatory Compliance",
+  //       sub: "Compliance validation",
+  //       status: "todo",
+  //     },
+  //     {
+  //       id: "P5",
+  //       name: "Quality Intelligence",
+  //       sub: "Quality assurance",
+  //       status: "todo",
+  //     },
+  //     {
+  //       id: "P6",
+  //       name: "DAM Integration",
+  //       sub: "Asset packaging",
+  //       status: "todo",
+  //     },
+  //     {
+  //       id: "P7",
+  //       name: "Integration Lineage",
+  //       sub: "System integration",
+  //       status: "todo",
+  //     },
+  //   ],
+  //   [],
+  // );
 
 const availableAdditionalAudiences = [
   "Secondary care physicians",
@@ -449,12 +509,15 @@ updateProjectMeta(projectId, {
           aria-label={`Open ${p.name}`}
         >
           {/* Use the logic from PhaseProgressBar.jsx to decide if dot is green */}
-          <span className={`phase-dot ${completedSet.has(p.id.toUpperCase()) ? 'is-done' : ''}`} />
+          {/* <span className={`phase-icon ${p.iconClass}`} /> */}
+          <span className={`phase-icon ${p.color || ''}`}>{p.icon}</span>
+          {/* <span className={`phase-dot ${completedSet.has(p.id.toUpperCase()) ? 'is-done' : ''}`} /> */}
           <span className="phase-text">
             <span className="phase-title">{p.name}</span>
             <span className="phase-sub">{p.sub}</span>
           </span>
           {p.status === "active" && <span className="phase-active-ind" />}
+          
         </button>
       ))}
     </nav>
@@ -733,7 +796,7 @@ updateProjectMeta(projectId, {
             <div className="soft-divider" />
 
             {/* Additional audiences */}
-            <div className="audiences">
+            {/* <div className="audiences">
               <div className="aud-row d-flex align-items-start justify-content-between">
                 <div className="aud-left">
                   <div className="info-label">Additional Audiences</div>
@@ -758,14 +821,14 @@ updateProjectMeta(projectId, {
                 </div>
               </div>
 
-              {/* Add audience select */}
+              
               <div className="d-flex align-items-center gap-2 mt-2">
                 <select
                   className="form-select form-select-sm"
                   onChange={(e) => {
                     const v = e.target.value;
                     if (v) toggleAdditionalAudience(v);
-                    e.target.value = ""; // reset
+                    e.target.value = ""; 
                   }}
                   defaultValue=""
                 >
@@ -781,7 +844,7 @@ updateProjectMeta(projectId, {
                     ))}
                 </select>
               </div>
-            </div>
+            </div> */}
           </section>
 
 
