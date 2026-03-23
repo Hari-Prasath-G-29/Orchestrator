@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import "../App.css";
 import {  ArrowLeft,
   Save, ArrowRight, Upload, FileText, CheckCircle2, Maximize2,
-  Minimize2, Users, Stethoscope, Edit2, Plus, X, Pill, Unlock, Box, MessageSquare, Globe, Languages, Shield, CheckCircle as CheckCircleIcon} from 'lucide-react';
+  Minimize2, Users, Stethoscope, Edit2, Plus, X, Pill, Unlock, Box, MessageSquare, Globe, Languages, Shield, CheckCircle as CheckCircleIcon } from 'lucide-react';
 import { Button } from "@mui/material";
 import { updateProjectMeta, markPhaseComplete, getProject, resetP2DraftState } from '../lib/progressStore';
 import { usePhaseNavigation } from "./PhaseNav.jsx";
@@ -31,11 +31,33 @@ const refreshProgress = async () => {
     return () => window.removeEventListener('glocal_progress_updated', refreshProgress);
   }, [projectId]);
  
+  // // 4. Calculate the "First 4 Phases" specific logic
+  // const { completedSet } = computeProgress(projectRec);
+  // const totalTarget = 4; // Your requirement
+  // const completedCount = Math.min(completedSet.size, totalTarget);
+  // const overallPercent = (completedCount / totalTarget) * 100;
+
   // 4. Calculate the "First 4 Phases" specific logic
-  const { completedSet } = computeProgress(projectRec);
   const totalTarget = 4; // Your requirement
-  const completedCount = Math.min(completedSet.size, totalTarget);
-  const overallPercent = (completedCount / totalTarget) * 100;
+  
+  // 🆕 Synchronous progress calculation to prevent UI flicker
+  const progressData = useMemo(() => {
+    let recToUse = projectRec;
+    if (!recToUse && projectId) {
+      const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+      recToUse = db[projectId];
+    }
+    
+    const { completedSet } = computeProgress(recToUse || {});
+    const count = Math.min(completedSet.size, totalTarget);
+    return {
+      completedSet,
+      completedCount: count,
+      overallPercent: Math.round((count / totalTarget) * 100)
+    };
+  }, [projectRec, projectId]);
+
+  const { completedSet, completedCount, overallPercent } = progressData;
 
  // From previous page (if passed)
  const projectName =
@@ -517,7 +539,6 @@ updateProjectMeta(projectId, {
             <span className="phase-sub">{p.sub}</span>
           </span>
           {p.status === "active" && <span className="phase-active-ind" />}
-          
         </button>
       ))}
     </nav>
@@ -792,9 +813,9 @@ updateProjectMeta(projectId, {
               </div>
             </div>
 
-            {/* Divider */}
+             {/* Divider */}
             <div className="soft-divider" />
-
+ 
             {/* Additional audiences */}
             {/* <div className="audiences">
               <div className="aud-row d-flex align-items-start justify-content-between">
@@ -820,15 +841,15 @@ updateProjectMeta(projectId, {
                   </div>
                 </div>
               </div>
-
-              
+ 
+             
               <div className="d-flex align-items-center gap-2 mt-2">
                 <select
                   className="form-select form-select-sm"
                   onChange={(e) => {
                     const v = e.target.value;
                     if (v) toggleAdditionalAudience(v);
-                    e.target.value = ""; 
+                    e.target.value = "";
                   }}
                   defaultValue=""
                 >

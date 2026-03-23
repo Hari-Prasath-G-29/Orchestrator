@@ -5,8 +5,8 @@ import { jsPDF } from "jspdf";
 import "./css/Cultural.css";
 import {  ArrowLeft,
   Save, ArrowRight, Upload, FileText, CheckCircle2, Maximize2, BarChart3, FileDown, Brain,
-  Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock, CheckCircle, TrendingUp, Languages,
-   Loader2, Sparkles, Lock , Box, MessageSquare, Globe, Shield, CheckCircle as CheckCircleIcon} from 'lucide-react';
+  Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock,Box, MessageSquare, Globe, Shield, CheckCircle as CheckCircleIcon
+ , TrendingUp, Languages, Loader2, Sparkles, Lock } from 'lucide-react';
 import { getProject, updateProjectMeta, markPhaseComplete, computeProgress } from '../lib/progressStore';
 import { usePhaseNavigation } from "./PhaseNav.jsx";
 
@@ -23,7 +23,7 @@ import { usePhaseNavigation } from "./PhaseNav.jsx";
 export default function CulturalAdaptationWorkspace({
   projectName: projectNameProp = "No project name to display",
   therapyArea = "",
-  progressItems: progressItemsProp = { reviewed: 0, total: 75 },
+  progressItems: progressItemsProp = { reviewed: 0, total: 0 },
    // segments: segmentsProp = [],
   segments: segmentsProp = null
 }) {
@@ -35,12 +35,17 @@ export default function CulturalAdaptationWorkspace({
   const [activeTab, setActiveTab] = useState("adaptation");
   const projectId = state?.projectId;
   const [projectRec, setProjectRec] = useState(null);
+
+  const [isLoadingProject, setIsLoadingProject] = useState(!!projectId);
  
   // 1. Fetching logic with real-time listener
   const refreshProgress = async () => {
     if (projectId) {
       const p = await getProject(projectId);
       setProjectRec(p);
+      setIsLoadingProject(false);
+    } else {
+      setIsLoadingProject(false);
     }
   };
  
@@ -49,22 +54,63 @@ export default function CulturalAdaptationWorkspace({
     window.addEventListener('glocal_progress_updated', refreshProgress);
     return () => window.removeEventListener('glocal_progress_updated', refreshProgress);
   }, [projectId]);
-  const totalTarget = 4; // 🆕 Define this so the sidebar can see it
+  // const totalTarget = 4; // 🆕 Define this so the sidebar can see it
  
-  const progressData = useMemo(() => {
-    // Default to 50% because P1 and P2 are completed
-    if (!projectRec) return { overallPercent: 50, completedCount: 2, completedSet: new Set(['P1', 'P2']) };
+  // const progressData = useMemo(() => {
+  //   // Default to 50% because P1 and P2 are completed
+  //   if (!projectRec) return { overallPercent: 50, completedCount: 2, completedSet: new Set(['P1', 'P2']) };
    
+  //   const { completedSet } = computeProgress(projectRec);
+  //   const count = Math.min(completedSet.size, totalTarget);
+  //   return {
+  //     overallPercent: Math.round((count / totalTarget) * 100),
+  //     completedCount: count,
+  //     completedSet
+  //   };
+  // }, [projectRec]);
+
+  const totalTarget = 4; // 🆕 Define this so the sidebar can see it
+
+  // 🆕 NEW: Official Loading State for the Sidebar
+  // 🆕 NEW: Official Loading State for the Sidebar
+  const progressData = useMemo(() => {
+    if (!projectRec) {
+      // Return a temporary loading state while the database is fetching
+      return { completedSet: new Set(), completedCount: 0, overallPercent: 0, isProgressLoading: true };
+    }
     const { completedSet } = computeProgress(projectRec);
     const count = Math.min(completedSet.size, totalTarget);
     return {
-      overallPercent: Math.round((count / totalTarget) * 100),
+      completedSet,
       completedCount: count,
-      completedSet
+      overallPercent: Math.round((count / totalTarget) * 100),
+      isProgressLoading: false
     };
   }, [projectRec]);
+
+  const { completedSet, completedCount, overallPercent, isProgressLoading } = progressData;
  
-  const { overallPercent, completedCount, completedSet } = progressData;
+  // const progressData = useMemo(() => {
+  //   // 🆕 1. Check local storage synchronously to stop the progress bar jumping
+  //   let recToUse = projectRec;
+  //   if (!recToUse && projectId) {
+  //     const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+  //     recToUse = db[projectId];
+  //   }
+
+  //   // 2. Safe fallback if completely empty
+  //   if (!recToUse) return { overallPercent: 50, completedCount: 2, completedSet: new Set(['P1', 'P2']) };
+   
+  //   const { completedSet } = computeProgress(recToUse);
+  //   const count = Math.min(completedSet.size, totalTarget);
+  //   return {
+  //     overallPercent: Math.round((count / totalTarget) * 100),
+  //     completedCount: count,
+  //     completedSet
+  //   };
+  // }, [projectRec, projectId]);
+ 
+  // const { overallPercent, completedCount, completedSet } = progressData;
   const progressPct = overallPercent;
   // // const [projectRec, setProjectRec] = useState(null);
   // useEffect(() => {
@@ -105,7 +151,7 @@ console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.lengt
   const N8N_CULTURAL_WEBHOOK_URL =
     ENV.REACT_APP_N8N_CULTURAL_WEBHOOK_URL ||
     ENV.VITE_N8N_CULTURAL_WEBHOOK_URL ||
-    "http://172.16.4.237:8016/webhook/cultural";
+    "http://172.16.4.24:8033/webhook/cultural";
 
   /** Batch webhook URL */
   const N8N_CULTURAL_BATCH_WEBHOOK_URL =
@@ -166,7 +212,7 @@ console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.lengt
        o.status ?? o.ciStatus ?? seg.ciStatus ?? seg.status ?? ""
      ).toLowerCase();
      if (status === "reviewed") return "Reviewed";
-     if (status === "completed") return "Reviewed"; // optional: treat Completed as Reviewed in the pill
+     //if (status === "completed") return "Reviewed"; // optional: treat Completed as Reviewed in the pill
      return "Pending";
 };
 
@@ -554,19 +600,73 @@ useEffect(() => {
   const [hasHydrated, setHasHydrated] = useState(false); // 🆕 THE LOCK
  
   // Hydrate UI State on load
+  // useEffect(() => {
+  //   // 🆕 If already loaded, lock the door to prevent vanishing text
+  //   if (hasHydrated || !persistedSegmentsP3 || persistedSegmentsP3.length === 0) return;
+ 
+  //   const initialOverrides = {};
+  //   persistedSegmentsP3.forEach(s => {
+  //     if (s.adapted || s.status || s.changeLog) {
+  //       initialOverrides[s.id] = { adapted: s.adapted, status: s.status, changeLog: s.changeLog };
+  //     }
+  //   });
+  //   setSegOverrides(prev => ({ ...prev, ...initialOverrides }));
+  //   setHasHydrated(true); // 🆕 ENGAGE THE LOCK
+  // }, [persistedSegmentsP3, hasHydrated]);
+  // Hydrate UI State on load
+  // useEffect(() => {
+  //   // 🆕 If already loaded, lock the door to prevent vanishing text
+  //   if (hasHydrated || !persistedSegmentsP3 || persistedSegmentsP3.length === 0) return;
+ 
+  //   const initialOverrides = {};
+  //   persistedSegmentsP3.forEach(s => {
+  //     if (s.adapted || s.status || s.ciStatus || s.changeLog) {
+        
+  //       // 🆕 Prevent Phase 2's 'Completed' from automatically becoming 'Reviewed'
+  //       let safeStatus = s.ciStatus || s.status || "Pending";
+  //       if (safeStatus.toLowerCase() === "completed") {
+  //         safeStatus = "Pending";
+  //       }
+
+  //       initialOverrides[s.id] = { 
+  //         adapted: s.adapted, 
+  //         status: safeStatus, 
+  //         changeLog: s.changeLog 
+  //       };
+  //     }
+  //   });
+  //   setSegOverrides(prev => ({ ...prev, ...initialOverrides }));
+  //   setHasHydrated(true); // 🆕 ENGAGE THE LOCK
+  // }, [persistedSegmentsP3, hasHydrated]);
+  // Hydrate UI State on load
   useEffect(() => {
-    // 🆕 If already loaded, lock the door to prevent vanishing text
-    if (hasHydrated || !persistedSegmentsP3 || persistedSegmentsP3.length === 0) return;
+    // 🆕 Wait for the DB to finish syncing before we hydrate
+    if (hasHydrated || isLoadingProject) return;
  
     const initialOverrides = {};
-    persistedSegmentsP3.forEach(s => {
-      if (s.adapted || s.status || s.changeLog) {
-        initialOverrides[s.id] = { adapted: s.adapted, status: s.status, changeLog: s.changeLog };
-      }
-    });
-    setSegOverrides(prev => ({ ...prev, ...initialOverrides }));
-    setHasHydrated(true); // 🆕 ENGAGE THE LOCK
-  }, [persistedSegmentsP3, hasHydrated]);
+    if (persistedSegmentsP3 && persistedSegmentsP3.length > 0) {
+      persistedSegmentsP3.forEach(s => {
+        if (s.adapted || s.status || s.ciStatus || s.changeLog) {
+          
+          // Prevent Phase 2's 'Completed' from automatically becoming 'Reviewed'
+          let safeStatus = s.ciStatus || s.status || "Pending";
+          if (safeStatus.toLowerCase() === "completed") {
+            safeStatus = "Pending";
+          }
+
+          initialOverrides[s.id] = { 
+            adapted: s.adapted, 
+            status: safeStatus, 
+            changeLog: s.changeLog 
+          };
+        }
+      });
+      setSegOverrides(prev => ({ ...prev, ...initialOverrides }));
+    }
+    
+    // 🆕 ENGAGE THE LOCK (We must unlock Auto-Save even if the DB was empty!)
+    setHasHydrated(true); 
+  }, [isLoadingProject, persistedSegmentsP3, hasHydrated]);
  
   // Auto-save changes securely to the database
 
@@ -634,6 +734,11 @@ useEffect(() => {
     return total > 0 ? { reviewed, total } : progressItemsProp;
 
   }, [segments, segOverrides, progressItemsProp]);
+
+  // 🆕 NEW: Calculate the local percentage just for Phase 3 segments
+  const localProgressPct = progressItems.total > 0 
+    ? Math.round((progressItems.reviewed / progressItems.total) * 100) 
+    : 0;
  
   
 
@@ -741,40 +846,70 @@ useEffect(() => {
   // };
 
    /** Complete Phase 3 → next page (adjust route as needed) */
-   const handleCompletePhase = async() => {
+//    const handleCompletePhase = async() => {
+//     const mergedSegments = segments.map((s) => {
+//       const o = segOverrides[s.id] || {};
+//       return {
+//         ...s,
+//         ...(o.adapted !== undefined ? { adapted: o.adapted } : {}),
+//         // ...(o.status !== undefined ? { status: o.status } : {}),
+//         // ...(o.ciStatus !== undefined ? { ciStatus: o.ciStatus } : {}),
+//         ...(o.status !== undefined ? { ciStatus: o.status } : {}),
+//         ...(o.ciStatus !== undefined ? { ciStatus: o.ciStatus } : {}),
+//       };
+//     });
+
+// // ✅ Persist P3 outputs
+//    // ✅ Persist P3 outputs AND seed P4
+//    updateProjectMeta(projectId, { 
+//      segmentsP3: mergedSegments,
+//      segmentsP4: mergedSegments // 🆕 SEED PHASE 4
+//    });
+
+//    // ✅ Mark P3 complete
+//    await markPhaseComplete(projectId, 'P3');
+
+//     // navigate("/regulatoryCompliance", {
+//     //   state: {
+//     //     projectId,
+//     //     projectName,
+//     //     segments: mergedSegments,
+//     //   },
+//     // });
+
+//     gotoPhase('P4');
+//   };
+/** Complete Phase 3 → next page */
+  const handleCompletePhase = async() => {
     const mergedSegments = segments.map((s) => {
       const o = segOverrides[s.id] || {};
       return {
         ...s,
         ...(o.adapted !== undefined ? { adapted: o.adapted } : {}),
-        // ...(o.status !== undefined ? { status: o.status } : {}),
-        // ...(o.ciStatus !== undefined ? { ciStatus: o.ciStatus } : {}),
         ...(o.status !== undefined ? { ciStatus: o.status } : {}),
         ...(o.ciStatus !== undefined ? { ciStatus: o.ciStatus } : {}),
       };
     });
 
-// ✅ Persist P3 outputs
-   // ✅ Persist P3 outputs AND seed P4
-   updateProjectMeta(projectId, { 
+   // ✅ Persist P3 outputs AND seed P4 (Using await ensures it finishes saving)
+   await updateProjectMeta(projectId, { 
      segmentsP3: mergedSegments,
-     segmentsP4: mergedSegments // 🆕 SEED PHASE 4
+     //segmentsP4: mergedSegments // 🆕 SEED PHASE 4
    });
 
    // ✅ Mark P3 complete
    await markPhaseComplete(projectId, 'P3');
 
+    // 🆕 Safely navigate directly so the Regulatory page receives the segments
     // navigate("/regulatoryCompliance", {
     //   state: {
     //     projectId,
     //     projectName,
     //     segments: mergedSegments,
     //   },
-    // });
-
+    // });\
     gotoPhase('P4');
   };
-
   /** Mark as Reviewed */
   const handleMarkReviewed = () => {
     if (!selectedResolved) return;
@@ -1456,132 +1591,132 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
   };
 
   /** ========= PDF GENERATION: AGENCY HANDOFF ========= */
-  // const handleGeneratePDF = () => {
-  //   const doc = new jsPDF();
-  //   const pageWidth = doc.internal.pageSize.getWidth();
-  //   const margin = 20;
+  const handleGeneratePDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
  
-  //   // Helper: Centered text
-  //   const addCenteredText = (text, y, size, isBold = false) => {
-  //     doc.setFontSize(size);
-  //     doc.setFont("helvetica", isBold ? "bold" : "normal");
-  //     const textWidth = doc.getTextWidth(text);
-  //     doc.text(text, (pageWidth - textWidth) / 2, y);
-  //   };
+    // Helper: Centered text
+    const addCenteredText = (text, y, size, isBold = false) => {
+      doc.setFontSize(size);
+      doc.setFont("helvetica", isBold ? "bold" : "normal");
+      const textWidth = doc.getTextWidth(text);
+      doc.text(text, (pageWidth - textWidth) / 2, y);
+    };
  
-  //   // Helper: Word-wrapped text
-  //   const addWrappedText = (text, y, size) => {
-  //     doc.setFontSize(size);
-  //     doc.setFont("helvetica", "normal");
-  //     const lines = doc.splitTextToSize(text || "—", pageWidth - margin * 2);
-  //     doc.text(lines, margin, y);
-  //     return y + (lines.length * (size * 0.45)); // return approximate new Y position
-  //   };
+    // Helper: Word-wrapped text
+    const addWrappedText = (text, y, size) => {
+      doc.setFontSize(size);
+      doc.setFont("helvetica", "normal");
+      const lines = doc.splitTextToSize(text || "—", pageWidth - margin * 2);
+      doc.text(lines, margin, y);
+      return y + (lines.length * (size * 0.45)); // return approximate new Y position
+    };
  
-  //   // --- PAGE 1: TITLE PAGE ---
-  //   addCenteredText("CULTURAL INTELLIGENCE", 70, 24, true);
-  //   addCenteredText("PLAYBOOK", 85, 24, true);
+    // --- PAGE 1: TITLE PAGE ---
+    addCenteredText("CULTURAL INTELLIGENCE", 70, 24, true);
+    addCenteredText("PLAYBOOK", 85, 24, true);
  
-  //   doc.setFontSize(12);
-  //   doc.setFont("helvetica", "normal");
-  //   const safeLang = state?.lang || getTargetLang(therapyArea) || "DE";
-  //   doc.text(`Project: ${projectName}`, margin, 130);
-  //   doc.text(`Target Market: ${country || safeLang.toUpperCase()}`, margin, 140);
-  //   doc.text(`Target Language: ${safeLang.toLowerCase()}`, margin, 150);
-  //   doc.text(`Therapeutic Area: ${therapyArea || "N/A"}`, margin, 160);
-  //   const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  //   doc.text(`Generated: ${dateStr}`, margin, 170);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    const safeLang = state?.lang || getTargetLang(therapyArea) || "DE";
+    doc.text(`Project: ${projectName}`, margin, 130);
+    doc.text(`Target Market: ${country || safeLang.toUpperCase()}`, margin, 140);
+    doc.text(`Target Language: ${safeLang.toLowerCase()}`, margin, 150);
+    doc.text(`Therapeutic Area: ${therapyArea || "N/A"}`, margin, 160);
+    const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    doc.text(`Generated: ${dateStr}`, margin, 170);
  
-  //   // --- PAGE 2: EXECUTIVE SUMMARY ---
-  //   doc.addPage();
-  //   doc.setFontSize(16);
-  //   doc.setFont("helvetica", "bold");
-  //   doc.text("EXECUTIVE SUMMARY", margin, 30);
+    // --- PAGE 2: EXECUTIVE SUMMARY ---
+    doc.addPage();
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("EXECUTIVE SUMMARY", margin, 30);
  
-  //   // Calculate Metrics
-  //   let totalScore = 0;
-  //   let scoredItems = 0;
-  //   let adaptedCount = 0;
-  //   segments.forEach(s => {
-  //     const analysis = analysisBySegment[s.id];
-  //     if (analysis && typeof analysis.overallScore === 'number') {
-  //       totalScore += analysis.overallScore;
-  //       scoredItems++;
-  //     }
-  //     if (segOverrides[s.id]?.adapted) adaptedCount++;
-  //   });
-  //   const avgScore = scoredItems > 0 ? Math.round(totalScore / scoredItems) : 0;
+    // Calculate Metrics
+    let totalScore = 0;
+    let scoredItems = 0;
+    let adaptedCount = 0;
+    segments.forEach(s => {
+      const analysis = analysisBySegment[s.id];
+      if (analysis && typeof analysis.overallScore === 'number') {
+        totalScore += analysis.overallScore;
+        scoredItems++;
+      }
+      if (segOverrides[s.id]?.adapted) adaptedCount++;
+    });
+    const avgScore = scoredItems > 0 ? Math.round(totalScore / scoredItems) : 0;
  
-  //   doc.setFontSize(12);
-  //   doc.setFont("helvetica", "normal");
-  //   doc.text(`Total Segments Analyzed: ${segments.length}`, margin, 50);
-  //   doc.text(`Segments Requiring Cultural Adaptation: ${adaptedCount}`, margin, 60);
-  //   doc.text(`High/Critical Priority Changes: 0`, margin, 70); 
-  //   doc.text(`Overall Cultural Appropriateness Score: ${avgScore}/100`, margin, 80);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Segments Analyzed: ${segments.length}`, margin, 50);
+    doc.text(`Segments Requiring Cultural Adaptation: ${adaptedCount}`, margin, 60);
+    doc.text(`High/Critical Priority Changes: 0`, margin, 70); 
+    doc.text(`Overall Cultural Appropriateness Score: ${avgScore}/100`, margin, 80);
  
-  //   doc.setFont("helvetica", "bold");
-  //   doc.text("KEY RECOMMENDATIONS:", margin, 105);
-  //   const recText = "This playbook provides segment-by-segment cultural intelligence analysis for the target market. Each segment includes specific action recommendations (REVIEW, REPLACE, REMOVE, or APPROVE), cultural proverbs where applicable, tone analysis, and market-specific guidance.";
-  //   addWrappedText(recText, 115, 12);
+    doc.setFont("helvetica", "bold");
+    doc.text("KEY RECOMMENDATIONS:", margin, 105);
+    const recText = "This playbook provides segment-by-segment cultural intelligence analysis for the target market. Each segment includes specific action recommendations (REVIEW, REPLACE, REMOVE, or APPROVE), cultural proverbs where applicable, tone analysis, and market-specific guidance.";
+    addWrappedText(recText, 115, 12);
  
-  //   // --- PAGES 3+: SEGMENT LOOP ---
-  //   segments.forEach((seg, idx) => {
-  //     doc.addPage();
-  //     doc.setFontSize(14);
-  //     doc.setFont("helvetica", "bold");
-  //     doc.text(`SEGMENT ${idx + 1}`, margin, 30);
+    // --- PAGES 3+: SEGMENT LOOP ---
+    segments.forEach((seg, idx) => {
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text(`SEGMENT ${idx + 1}`, margin, 30);
  
-  //     doc.setFontSize(12);
-  //     doc.text("Original Translation:", margin, 45);
-  //     let currentY = addWrappedText(seg.translated || seg.source || "—", 55, 11);
+      doc.setFontSize(12);
+      doc.text("Original Translation:", margin, 45);
+      let currentY = addWrappedText(seg.translated || seg.source || "—", 55, 11);
  
-  //     // Include adapted text if the user approved changes
-  //     const adaptedText = segOverrides[seg.id]?.adapted;
-  //     if (adaptedText) {
-  //       doc.setFont("helvetica", "bold");
-  //       currentY += 10;
-  //       doc.text("Culturally Adapted Translation:", margin, currentY);
-  //       currentY += 10;
-  //       currentY = addWrappedText(adaptedText, currentY, 11);
-  //     }
+      // Include adapted text if the user approved changes
+      const adaptedText = segOverrides[seg.id]?.adapted;
+      if (adaptedText) {
+        doc.setFont("helvetica", "bold");
+        currentY += 10;
+        doc.text("Culturally Adapted Translation:", margin, currentY);
+        currentY += 10;
+        currentY = addWrappedText(adaptedText, currentY, 11);
+      }
  
-  //     const score = analysisBySegment[seg.id]?.overallScore || 0;
-  //     doc.setFont("helvetica", "bold");
-  //     currentY += 15;
-  //     doc.text(`Cultural Appropriateness Score: ${score}/100`, margin, currentY);
-  //   });
+      const score = analysisBySegment[seg.id]?.overallScore || 0;
+      doc.setFont("helvetica", "bold");
+      currentY += 15;
+      doc.text(`Cultural Appropriateness Score: ${score}/100`, margin, currentY);
+    });
  
-  //   // --- FINAL PAGE: IMPLEMENTATION CHECKLIST ---
-  //   doc.addPage();
-  //   doc.setFontSize(16);
-  //   doc.setFont("helvetica", "bold");
-  //   doc.text("IMPLEMENTATION CHECKLIST", margin, 30);
+    // --- FINAL PAGE: IMPLEMENTATION CHECKLIST ---
+    doc.addPage();
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("IMPLEMENTATION CHECKLIST", margin, 30);
  
-  //   const checklist = [
-  //     "Review all REPLACE recommendations with native speakers",
-  //     "Implement high/critical priority changes first",
-  //     "Validate tone appropriateness with local stakeholders",
-  //     "Apply cultural proverbs where suggested",
-  //     "Verify formality levels match target audience expectations",
-  //     "Submit culturally adapted content for regulatory review",
-  //     "Conduct final quality assurance with in-market experts",
-  //     "Document all changes for audit trail"
-  //   ];
+    const checklist = [
+      "Review all REPLACE recommendations with native speakers",
+      "Implement high/critical priority changes first",
+      "Validate tone appropriateness with local stakeholders",
+      "Apply cultural proverbs where suggested",
+      "Verify formality levels match target audience expectations",
+      "Submit culturally adapted content for regulatory review",
+      "Conduct final quality assurance with in-market experts",
+      "Document all changes for audit trail"
+    ];
  
-  //   doc.setFontSize(12);
-  //   doc.setFont("helvetica", "normal");
-  //   let chkY = 50;
-  //   checklist.forEach(item => {
-  //     // Draw a literal checkbox square
-  //     doc.rect(margin, chkY - 4, 4, 4); 
-  //     doc.text(item, margin + 8, chkY);
-  //     chkY += 12;
-  //   });
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    let chkY = 50;
+    checklist.forEach(item => {
+      // Draw a literal checkbox square
+      doc.rect(margin, chkY - 4, 4, 4); 
+      doc.text(item, margin + 8, chkY);
+      chkY += 12;
+    });
  
-  //   // Trigger Download
-  //   const isoDate = new Date().toISOString().split('T')[0];
-  //   doc.save(`Cultural-Intelligence-Playbook-${safeLang.toUpperCase()}-${isoDate}.pdf`);
-  // };
+    // Trigger Download
+    const isoDate = new Date().toISOString().split('T')[0];
+    doc.save(`Cultural-Intelligence-Playbook-${safeLang.toUpperCase()}-${isoDate}.pdf`);
+  };
 
   return (
     <div className="cultural-page">
@@ -1589,30 +1724,23 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
     <div className={`tm-app ${isFocusMode ? 'is-focus' : ''}`}>
       {/* Sidebar */}
       <aside className="tm-sidebar" aria-label="Workflow Phases">
-  <div className="tm-sidebar-progress">
-    <div className="tm-progress-row">
-      <span className="tm-progress-label">Overall Progress</span>
-      {/* FIX: Changed from progressPct to overallPercent */}
-      <span className="tm-progress-value">{overallPercent}%</span>
-    </div>
-    <div className="tm-progress-sub">
-      {/* FIX: Changed from progressItems.reviewed to completedCount and totalTarget */}
-      {completedCount} of {totalTarget} phases completed
-    </div>
-    <div
-      className="tm-progress-bar"
-      role="progressbar"
-      aria-valuenow={overallPercent}
-      aria-valuemin={0}
-      aria-valuemax={100}
-    >
-      {/* FIX: Changed width to use overallPercent */}
-      <div
-        className="tm-progress-fill"
-        style={{ width: `${overallPercent}%`, transition: 'width 0.3s ease-in-out' }}
-      />
-    </div>
-  </div>
+  {/* Global Progress Section */}
+        <div className="tm-sidebar-progress" style={{ opacity: isProgressLoading ? 0.6 : 1, transition: 'opacity 0.3s' }}>
+          <div className="tm-progress-row">
+            <span className="tm-progress-label">Overall Progress</span>
+            {/* 🆕 Show ... while loading */}
+            <span className="tm-progress-value">{isProgressLoading ? "..." : `${overallPercent}%`}</span>
+          </div>
+          {/* 🆕 Show Syncing... while loading */}
+          <div className="tm-progress-sub">{isProgressLoading ? "Syncing..." : `${completedCount} of ${totalTarget} phases completed`}</div>
+         
+          <div className="tm-progress-bar">
+            <div
+              className="tm-progress-fill"
+              style={{ width: `${overallPercent}%`, transition: 'width 0.4s ease-out' }}
+            />
+          </div>
+        </div>
  
   <nav className="tm-phases">
     {SIDEBAR_PHASES.map((p) => {
@@ -1628,7 +1756,8 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
             isActive ? "is-active" : ""
           }`}
           aria-label={`Open ${p.name}`}
-          onClick={() => handlePhaseClick(p.name)}
+          //onClick={() => handlePhaseClick(p.name)}
+          onClick={() => gotoPhase(p.id)}
         >
           {/* <span className={`tm-phase-icon ${p.iconClass}`} /> */}
           <span className={`tm-phase-icon ${p.color || ''}`}>{p.icon}</span>
@@ -1636,14 +1765,14 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
             <span className="tm-phase-title">{p.name}</span>
             <span className="tm-phase-sub">{p.sub}</span>
           </span>
-          {isDone && (
-            <span className="tm-phase-check" aria-hidden={true}>
+          {isDone && !isProgressLoading &&(
+            <span className="tm-phase-check">
               ✓
             </span>
           )}
-          {isActive && !isDone && (
-            <span className="tm-phase-dot" aria-hidden={true} />
-          )}
+          {p.status==="active"&& !isDone && isProgressLoading&& 
+            <span className="tm-phase-dot" />
+          }
         </button>
       );
     })}
@@ -1845,19 +1974,19 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
       <div className="tm-progress-inline-bar">
         <div
           className="tm-progress-inline-fill"
-          style={{ width: `${progressPct}%` }}
+          style={{ width: `${localProgressPct}%` }}
         ></div>
       </div>
     </div>
 
     <div className="ci-actions">
-      <button className="tm-btn outline">
+      {/* <button className="tm-btn outline">
         <FileDown size={15} /> Generate Agency Handoff PDF
-      </button>
-
-      {/* <button className="tm-btn outline" onClick={handleGeneratePDF}>
-      <FileDown size={15} className="mr-2" /> Generate Agency Handoff PDF
       </button> */}
+
+      <button className="tm-btn outline" onClick={handleGeneratePDF}>
+      <FileDown size={15} className="mr-2" /> Generate Agency Handoff PDF
+      </button>
  
 
       <button  className={`tm-btn outline ${isAnalyzingAll ? "is-loading" : ""}`}
@@ -1887,6 +2016,14 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
     </div>
   </div>
 </section>
+{/* 🆕 NEW: LOADING GATE STARTS HERE */}
+            {isLoadingProject ? (
+              <div className="tm-workspace-loading" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 0', color: '#6B7280' }}>
+                <Loader2 size={32} className="animate-spin mb-4 text-emerald-600" />
+                <p>Syncing Cultural Data...</p>
+              </div>
+            ) : (
+              <>
       
                   {/* Inline batch feedback */}
                   {(analyzeAllError || analyzeAllSuccess) && (
@@ -2121,7 +2258,10 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
           </div>
           
         </section>
-        </div>
+        
+        </>
+            )}
+            </div>
  ) : activeTab === "draft" ? (
   /* ============= NEW CULTURALLY-ADAPTED DRAFT VIEW ============= */
   <div className="tm-draft-container">
@@ -2514,6 +2654,17 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
   );
 }
 
+// /* Sidebar phases */
+// const SIDEBAR_PHASES = [
+//   { id: 'P1', name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
+//   { id: 'P2', name: "Smart TM Translation", sub: "AI-powered translation", status: "done", iconClass: "icon-translation" },
+//   { id: 'P3', name: "Cultural Intelligence", sub: "Cultural adaptation", status: "active", iconClass: "icon-culture" },
+//   { id: 'P4', name: "Regulatory Compliance", sub: "Compliance validation", status: "todo", iconClass: "icon-compliance" },
+//   { id: 'P5', name: "Quality Intelligence", sub: "Quality assurance", status: "todo", iconClass: "icon-quality" },
+//   { id: 'P6', name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
+//   { id: 'P7', name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
+// ];
+
 const SIDEBAR_PHASES = [
   {
     id: 'P1',
@@ -2572,6 +2723,8 @@ const SIDEBAR_PHASES = [
     color: 'is-violet'
   },
 ];
+ 
+ 
 
 /** ========= Simple Reusable Modal ========= */
 function Modal({ open, onClose, children, ariaLabel = "Dialog" }) {

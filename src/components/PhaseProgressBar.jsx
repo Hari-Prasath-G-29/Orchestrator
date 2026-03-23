@@ -24,7 +24,7 @@ return (
 
         // Optional: show a subtle outline on the next incomplete phase,
         // but DO NOT make it green.
-        const isCurrent = nextPhase?.id === p.id;
+        const isCurrent = !isDone && nextPhase?.id === p.id;
 
         const cls = [
           'pp-seg',

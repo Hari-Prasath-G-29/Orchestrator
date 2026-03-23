@@ -27,11 +27,17 @@ export default function RegulatoryComplianceHub({
   const projectId = state?.projectId;
   const [projectRec, setProjectRec] = useState(null);
   const totalTargetPhases = 4; // Define this clearly at the top
+
+  // 🆕 NEW: Add loading state. Starts true if we have a project.
+  const [isLoadingProject, setIsLoadingProject] = useState(!!projectId);
  
   const refreshGlobalProgress = async () => {
     if (projectId) {
       const p = await getProject(projectId);
       setProjectRec(p);
+      setIsLoadingProject(false);
+    }else {
+      setIsLoadingProject(false);
     }
   };
  
@@ -42,18 +48,38 @@ export default function RegulatoryComplianceHub({
   }, [projectId]);
  
   // Wrap in useMemo for performance and safety
+  // const progressData = useMemo(() => {
+  //   // If project hasn't loaded, default to 75% (since we are in Phase 4)
+  //   if (!projectRec) {
+  //     return { count: 3, percent: 75, set: new Set(['P1', 'P2', 'P3']) };
+  //   }
+ 
+  //   const { completedSet } = computeProgress(projectRec);
+  //   const count = Math.min(completedSet.size, totalTargetPhases);
+  //   const percent = Math.round((count / totalTargetPhases) * 100);
+ 
+  //   return { count, percent, set: completedSet };
+  // }, [projectRec]);
+  // Wrap in useMemo for performance and safety
   const progressData = useMemo(() => {
-    // If project hasn't loaded, default to 75% (since we are in Phase 4)
-    if (!projectRec) {
+    // 🆕 1. Check local storage synchronously to stop the progress bar jumping
+    let recToUse = projectRec;
+    if (!recToUse && projectId) {
+      const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+      recToUse = db[projectId];
+    }
+
+    // 2. Safe fallback if completely empty
+    if (!recToUse) {
       return { count: 3, percent: 75, set: new Set(['P1', 'P2', 'P3']) };
     }
  
-    const { completedSet } = computeProgress(projectRec);
+    const { completedSet } = computeProgress(recToUse);
     const count = Math.min(completedSet.size, totalTargetPhases);
     const percent = Math.round((count / totalTargetPhases) * 100);
  
     return { count, percent, set: completedSet };
-  }, [projectRec]);
+  }, [projectRec, projectId]);
  
   // Unified variable names to match all your JSX parts
   const completedCount = progressData.count;
@@ -194,7 +220,9 @@ export default function RegulatoryComplianceHub({
 
   useEffect(() => {
     // 🆕 If we have already loaded the data, DO NOT run this again! (Stops the freeze)
-    if (!segments || segments.length === 0 || hasHydrated) return;
+    //if (!segments || segments.length === 0 || hasHydrated) return;
+
+    if (isLoadingProject || hasHydrated || !segments || segments.length === 0) return;
 
     const initialScores = {};
     const initialCompliant = {};
@@ -223,7 +251,7 @@ export default function RegulatoryComplianceHub({
     // 🆕 ENGAGE THE LOCK
     setHasHydrated(true); 
     
-  }, [segments, hasHydrated]);
+  }, [segments, hasHydrated, isLoadingProject]);
 
   /** Progress (approved count) */
   const progressItems = useMemo(() => {
@@ -298,6 +326,11 @@ export default function RegulatoryComplianceHub({
   }, [segments, segOverrides]);
 
   const totalCount = segments.length;
+  
+  // 🆕 NEW: Calculate the local percentage just for Phase 4 segments
+  const localProgressPct = totalCount > 0 
+    ? Math.round((approvedCount / totalCount) * 100) 
+    : 0;
   
 
   /** Sidebar: retain context when moving across phases */
@@ -1083,22 +1116,33 @@ const overallComplianceScoreFromModal = analysisData?.score ?? null; // number |
  
     <div className="tm-progress-inline">
       <span className="tm-progress-inline-label">Progress:</span>
-      <span className="tm-progress-inline-value">
+      {/* <span className="tm-progress-inline-value">
         {completedCount === 4 ? "100%" : "75%"}
-      </span>
+      </span> */}
+      <span className="tm-progress-inline-value">
+                    {approvedCount} / {totalCount} approved
+                  </span>
       <div className="tm-progress-inline-bar">
         {/* Uses the overallPercent we set up in the previous step */}
         <div
           className="tm-progress-inline-fill"
-          style={{ width: `${overallPercent}%`, transition: 'width 0.5s ease-in-out' }}
+          style={{ width: `${localProgressPct}%`, transition: 'width 0.5s ease-in-out' }}
         />
       </div>
     </div>
   </div>
 </section>
 
-            {/* Workspace grid */}
+            {/* 🆕 NEW: LOADING GATE STARTS HERE */}
+            {isLoadingProject ? (
+              <div className="tm-workspace-loading" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 0', color: '#6B7280' }}>
+                <Loader2 size={32} className="animate-spin mb-4 text-emerald-600" />
+                <p>Syncing Regulatory Data...</p>
+              </div>
+            ) : (
+              
             <section className="tm-workspace rc-workspace">
+              {/* Workspace grid */}
 
               <div className="tm-card tm-left">
                 <div className="tm-card-header">
@@ -1226,7 +1270,10 @@ const overallComplianceScoreFromModal = analysisData?.score ?? null; // number |
                 )}
               </div>
             </section>
-          </div>
+          
+        
+        )}
+        </div>
         )}
 
         {mainTab === "report" && (
@@ -1930,7 +1977,7 @@ function IntelInnerTabs({ locale = "DE", overallPct = 100 }) {
   );
 }
 
-/* Sidebar phases */
+// /* Sidebar phases */
 // const SIDEBAR_PHASES = [
 //   { id: 'P1', name: "Global Context Capture", sub: "Source content analysis", status: "done", iconClass: "icon-context" },
 //   { id: 'P2', name: "Smart TM Translation", sub: "AI-powered translation", status: "done", iconClass: "icon-translation" },
@@ -1999,3 +2046,4 @@ const SIDEBAR_PHASES = [
     color: 'is-violet'
   },
 ];
+ 

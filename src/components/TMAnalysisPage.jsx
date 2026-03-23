@@ -8,52 +8,171 @@ const TMAnalysis = () => {
   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
 
   // Destructure data passed from SmartTMTranslationHub 
-  const { segment, reviewData } = state || {};
+  const { segment, reviewData, allSegments = [] } = state || {};
   
-  // // 1. Calculate Score and Total Words
-  // const rawScore = reviewData?.tmScore || 0;
-  // const scorePercentage = Math.round(rawScore * 100);
-  // const totalWords = segment?.words || 0;
+  // 1. Calculate GLOBAL Project-Wide Score and Words
+  const { 
+    globalLeveragePct, 
+    exactWords, 
+    fuzzyWords, 
+    newWords, 
+    totalProjectWords 
+  } = useMemo(() => {
+    // Fallback to single segment if allSegments is missing for any reason
+    const segmentsToProcess = allSegments.length > 0 ? allSegments : [segment].filter(Boolean);
 
-  // 1. Calculate Score and Total Words
-  // 🆕 Fallback: If no explicit score is provided but the segment is translated, assume 100% (1.0)
-  const rawScore = reviewData?.tmScore !== undefined 
-    ? reviewData.tmScore 
-    : (segment?.translated ? 1 : 0);
-  const scorePercentage = Math.round(rawScore * 100);
-  const totalWords = segment?. Words || 0;
-  
-  // 2. Dynamic Word Calculation Logic
-  const { exactWords, fuzzyWords, newWords } = useMemo(() => {
-    let exact = 0;
-    let fuzzy = 0;
-    let nevv = 0; 
+    let exactSegCount = 0;
+    let fuzzySegCount = 0;
 
-    if (rawScore >= 0.95) {
-      exact = totalWords;
-    } else if (rawScore >= 0.70) {
-      fuzzy = totalWords;
-    } else {
-      nevv = totalWords;
-    }
-    return { exactWords: exact, fuzzyWords: fuzzy, newWords: nevv };
-  }, [rawScore, totalWords]);
+    let exactW = 0;
+    let fuzzyW = 0;
+    let newW = 0;
+    let totalW = 0;
 
-  // 3. NEW: Calculate Glossary Count
-  // We check if glossaryUsed exists, then count the keys (terms)
+    segmentsToProcess.forEach(seg => {
+      let rawScore = 0;
+      if (typeof seg.matchScore === 'number') {
+        rawScore = seg.matchScore;
+      } else if (seg.reviewData && typeof seg.reviewData.tmScore === 'number') {
+        rawScore = seg.reviewData.tmScore <= 1 ? seg.reviewData.tmScore * 100 : seg.reviewData.tmScore;
+      } else if (seg.translated && seg.translated.trim() !== "" && seg.translated !== "— Awaiting translation —") {
+        rawScore = 100;
+      }
+
+      const score = Math.round(rawScore);
+      const w = seg.words || 0;
+      totalW += w;
+
+      // Allocate words based on score exactly like the Overview tab
+      if (score >= 95) {
+        exactSegCount++;
+        exactW += w;
+      } else if (score >= 70) {
+        fuzzySegCount++;
+        fuzzyW += w;
+      } else {
+        newW += w;
+      }
+    });
+
+    const totalSegs = segmentsToProcess.length;
+    const leveragePct = totalSegs > 0 ? Math.round(((exactSegCount + fuzzySegCount) / totalSegs) * 100) : 0;
+
+    return {
+      globalLeveragePct: leveragePct,
+      exactWords: exactW,
+      fuzzyWords: fuzzyW,
+      newWords: newW,
+      totalProjectWords: totalW
+    };
+  }, [allSegments, segment]);
+
+  // 2. Glossary Count (Kept specific to the current segment)
   const glossaryCount = reviewData?.glossaryUsed 
     ? Object.keys(reviewData.glossaryUsed).length 
     : 0;
 
   const glossaryKeys = reviewData?.glossaryUsed ? Object.keys(reviewData.glossaryUsed) : [];
 
-  // Mock Quality Data (using real glossary count now)
+  // Mock Quality Data
   const qualityData = {
     sentiment: "Neutral",
     safetyStatus: "Pass",
     tone: "Professional",
     backTranslation: "Appropriate considerations for administering ConditionY to suitable patients." 
   };
+  
+// import React, { useState, useMemo } from 'react';
+// import { useLocation, useNavigate } from 'react-router-dom';
+
+// const TMAnalysis = () => {
+//   const { state } = useLocation();
+//   const navigate = useNavigate();
+//   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
+
+//   // Destructure data passed from SmartTMTranslationHub 
+//   // const { segment, reviewData } = state || {};
+  
+//   // // // 1. Calculate Score and Total Words
+//   // // const rawScore = reviewData?.tmScore || 0;
+//   // // const scorePercentage = Math.round(rawScore * 100);
+//   // // const totalWords = segment?.words || 0;
+
+//   // // 1. Calculate Score and Total Words
+//   // // 🆕 Fallback: If no explicit score is provided but the segment is translated, assume 100% (1.0)
+//   // const rawScore = reviewData?.tmScore !== undefined 
+//   //   ? reviewData.tmScore 
+//   //   : (segment?.translated ? 1 : 0);
+//   // const scorePercentage = Math.round(rawScore * 100);
+//   // const totalWords = segment?.words || 0;
+  
+//   // // 2. Dynamic Word Calculation Logic
+//   // const { exactWords, fuzzyWords, newWords } = useMemo(() => {
+//   //   let exact = 0;
+//   //   let fuzzy = 0;
+//   //   let nevv = 0; 
+
+//   //   if (rawScore >= 0.95) {
+//   //     exact = totalWords;
+//   //   } else if (rawScore >= 0.70) {
+//   //     fuzzy = totalWords;
+//   //   } else {
+//   //     nevv = totalWords;
+//   //   }
+//   //   return { exactWords: exact, fuzzyWords: fuzzy, newWords: nevv };
+//   // }, [rawScore, totalWords]);
+//   // Destructure data passed from SmartTMTranslationHub 
+
+//   //score calculation logic updated to handle both matchScore and tmScore
+//   const { segment, reviewData } = state || {};
+  
+//   // 1. Unified Score Calculation (Matches Overview & Draft Panel)
+//   const scorePercentage = useMemo(() => {
+//     let rawScore = 0;
+//     if (typeof segment?.matchScore === 'number') {
+//       rawScore = segment.matchScore;
+//     } else if (reviewData && typeof reviewData.tmScore === 'number') {
+//       rawScore = reviewData.tmScore <= 1 ? reviewData.tmScore * 100 : reviewData.tmScore;
+//     } else if (segment?.translated && segment.translated.trim() !== "" && segment.translated !== "— Awaiting translation —") {
+//       rawScore = 100;
+//     }
+//     return Math.round(rawScore);
+//   }, [segment, reviewData]);
+
+//   const totalWords = segment?.words || 0;
+  
+//   // 2. Dynamic Word Calculation Logic
+//   const { exactWords, fuzzyWords, newWords } = useMemo(() => {
+//     let exact = 0;
+//     let fuzzy = 0;
+//     let nevv = 0; 
+
+//     // We use scorePercentage directly now (e.g., 100, 75, 0)
+//     if (scorePercentage >= 95) {
+//       exact = totalWords;
+//     } else if (scorePercentage >= 70) {
+//       fuzzy = totalWords;
+//     } else {
+//       nevv = totalWords;
+//     }
+//     return { exactWords: exact, fuzzyWords: fuzzy, newWords: nevv };
+//   }, [scorePercentage, totalWords]);
+
+//   // 3. NEW: Calculate Glossary Count
+//   // We check if glossaryUsed exists, then count the keys (terms)
+//   const glossaryCount = reviewData?.glossaryUsed 
+//     ? Object.keys(reviewData.glossaryUsed).length 
+//     : 0;
+
+//   const glossaryKeys = reviewData?.glossaryUsed ? Object.keys(reviewData.glossaryUsed) : [];
+
+//   // Mock Quality Data (using real glossary count now)
+//   const qualityData = {
+//     sentiment: "Neutral",
+//     safetyStatus: "Pass",
+//     tone: "Professional",
+//     backTranslation: "Appropriate considerations for administering ConditionY to suitable patients." 
+//   };
 
   return (
     <div className="tm-analysis-page">
@@ -72,7 +191,7 @@ const TMAnalysis = () => {
 
         <div className="tm-analysis-body">
           {/* Section 1: Translation Summary */}
-          <div className="tm-summary-section">
+          {/* <div className="tm-summary-section">
             <div className="tm-summary-card-header">
               <span className="tm-summary-icon-small">📈</span>
               <div className="tm-summary-text">
@@ -83,8 +202,26 @@ const TMAnalysis = () => {
 
             <div className="tm-stats-grid">
               {/* 1. TM LEVERAGE */}
-              <div className="tm-stat-card tm-leverage-card">
+              {/* <div className="tm-stat-card tm-leverage-card">
                 <span className="tm-stat-value">{scorePercentage}%</span>
+                <span className="tm-stat-label">TM LEVERAGE</span>
+              </div> */} 
+              {/* Section 1: Translation Summary */}
+          <div className="tm-summary-section">
+            <div className="tm-summary-card-header">
+              <span className="tm-summary-icon-small">📈</span>
+              <div className="tm-summary-text">
+                <h3>Project Translation Summary</h3>
+                {/* Updated to show Project Total words */}
+                <p>Analyzing Segment {segment?.index || 1} • Project Total: {totalProjectWords} words</p>
+              </div>
+            </div>
+
+            <div className="tm-stats-grid">
+              {/* 1. TM LEVERAGE */}
+              <div className="tm-stat-card tm-leverage-card">
+                {/* Updated to use globalLeveragePct */}
+                <span className="tm-stat-value">{globalLeveragePct}%</span>
                 <span className="tm-stat-label">TM LEVERAGE</span>
               </div>
 

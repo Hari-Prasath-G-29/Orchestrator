@@ -307,13 +307,32 @@ export async function deleteProject(projectId) {
 
 // --- HELPER LOGIC ---
 
+// export function computeProgress(record) {
+//   const total = PHASES.length;
+//   const completedArr = record?.completed || [];
+//   const completedSet = new Set(completedArr.map(normPhaseId));
+//   const doneCount = completedSet.size;
+//   const nextPhase = PHASES.find(p => !completedSet.has(normPhaseId(p.id))) || null;
+//   return { completedSet, doneCount, total, nextPhase };
+// }
+// Change this in progressStore.js -> computeProgress
 export function computeProgress(record) {
-  const total = PHASES.length;
   const completedArr = record?.completed || [];
   const completedSet = new Set(completedArr.map(normPhaseId));
-  const doneCount = completedSet.size;
-  const nextPhase = PHASES.find(p => !completedSet.has(normPhaseId(p.id))) || null;
-  return { completedSet, doneCount, total, nextPhase };
+  
+  // Find the highest index currently completed
+  const lastDoneIndex = PHASES.reduce((max, p, idx) => 
+    completedSet.has(normPhaseId(p.id)) ? idx : max, -1);
+
+  // The "Next" phase is the one immediately following the last completed one
+  const nextPhase = PHASES[lastDoneIndex + 1] || null;
+
+  return { 
+    completedSet, 
+    doneCount: completedSet.size, 
+    total: PHASES.length, 
+    nextPhase 
+  };
 }
 
 export async function setP2DraftGenerated(projectId, generated = true, { segmentsP2 } = {}) {

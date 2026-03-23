@@ -4,14 +4,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import "./css/Translationhub.css";
 // import {  ArrowLeft,
 //   Save, ArrowRight, Upload, FileText, CheckCircle2, Maximize2, BarChart3,
-//   Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock, CheckCircle, 
-//   TrendingUp, Languages, Loader2, Sparkles, Lock } from 'lucide-react'; 
+//   Minimize2, Users, Stethoscope, Edit3, Plus, X, Pill, Unlock, CheckCircle, TrendingUp, Languages, Loader2, Sparkles, Lock } from 'lucide-react';
 import {
-  ArrowLeft, Save, ArrowRight, FileText, CheckCircle2, Maximize2, BarChart3,
+  ArrowLeft, Save, ArrowRight, Upload, FileText, CheckCircle2, Maximize2, BarChart3,
   Minimize2, Edit3, Unlock, CheckCircle, TrendingUp, Languages, Loader2, Sparkles, Lock,
   Globe, Shield, CheckCircle as CheckCircleIcon, Box, MessageSquare
 } from 'lucide-react';
-
 import { getProject, updateProjectMeta, markPhaseComplete, setP2DraftGenerated, computeProgress } from '../lib/progressStore';
 import { usePhaseNavigation } from "./PhaseNav.jsx";
 
@@ -30,7 +28,6 @@ import TMLeverageOverview from "./TMLeverageOverview";
 //   { id: 'P6', name: "DAM Integration", sub: "Asset packaging", status: "todo", iconClass: "icon-dam" },
 //   { id: 'P7', name: "Integration Lineage", sub: "System integration", status: "todo", iconClass: "icon-integration" },
 // ];
-
 const SIDEBAR_PHASES = [
   {
     id: 'P1',
@@ -497,6 +494,22 @@ function DraftPanel({
   }, [segments, inboundLang]);
 
   const totalSegments = normalized.length;
+
+  //Fixing Draft Panel badges......!......
+  // 🆕 NEW: Calculate the individual score for each row
+  const getSegScore = (seg) => {
+    let rawScore = 0;
+    if (typeof seg.matchScore === 'number') {
+      rawScore = seg.matchScore;
+    } else if (seg.reviewData && typeof seg.reviewData.tmScore === 'number') {
+      rawScore = seg.reviewData.tmScore <= 1 ? seg.reviewData.tmScore * 100 : seg.reviewData.tmScore;
+    } else if (seg.translated && seg.translated.trim() !== "" && seg.translated !== "— Awaiting translation —") {
+      rawScore = 100;
+    }
+    return Math.round(rawScore);
+  };
+
+
   const totalWords = normalized.reduce((a, s) => a + (s.words || 0), 0);
 
   const [openIds, setOpenIds] = useState(new Set());
@@ -591,7 +604,10 @@ function DraftPanel({
                   <span className="dt-item-title">Section {s.index}</span>
 
                   <span className="dt-badge green">{s.words || 0} words</span>
-                  <span className="dt-badge gray">{tmLeveragePct}% TM</span>
+                  {/* <span className="dt-badge gray">{tmLeveragePct}% TM</span> */}
+
+                {/* NEW: Show individual segment score if available */}
+                <span className="dt-badge gray">{getSegScore(s)}% TM</span>
 
                   <button
                     className={`dt-toggle ${open ? "open" : ""}`}
@@ -671,13 +687,31 @@ export default function SmartTMTranslationHub({
   const navigate = useNavigate();
   const projectId = state?.projectId;
 
-  // ✅ 1. Use async State for the project record
   const [projectRec, setProjectRec] = useState(null);
+  // // ✅ 1. Use async State for the project record
+  // const [projectRec, setProjectRec] = useState(null);
   const inboundLang = projectRec?.meta?.targetLang || state?.lang || state?.sourceLang || "EN";
+  // const refreshProgress = async () => {
+  //   if (projectId) {
+  //     const p = await getProject(projectId);
+  //     setProjectRec(p);
+  //   }
+  // };
+  // ✅ 1. Use async State for the project record
+  
+  
+  // 🆕 NEW: Add a loading state. Defaults to true if we have a projectId to fetch.
+  const [isLoadingProject, setIsLoadingProject] = useState(!!projectId); 
+
   const refreshProgress = async () => {
     if (projectId) {
+      // Only set to true if it's the very first load to prevent flickering on background syncs
+      // if (!projectRec) setIsLoadingProject(true); 
       const p = await getProject(projectId);
       setProjectRec(p);
+      setIsLoadingProject(false); // 🆕 NEW: Turn off loader when data arrives
+    } else {
+      setIsLoadingProject(false);
     }
   };
  
@@ -686,10 +720,47 @@ useEffect(() => {
     window.addEventListener('glocal_progress_updated', refreshProgress);
     return () => window.removeEventListener('glocal_progress_updated', refreshProgress);
   }, [projectId]);
-const { completedSet } = computeProgress(projectRec);
-  const totalTarget = 4;
-  const completedCount = Math.min(completedSet.size, totalTarget);
-  const overallPercent = (completedCount / totalTarget) * 100;
+// const { completedSet } = computeProgress(projectRec);
+//   const totalTarget = 4;
+//   const completedCount = Math.min(completedSet.size, totalTarget);
+//   const overallPercent = (completedCount / totalTarget) * 100;
+const totalTarget = 4;
+  
+  // 🆕 Synchronous progress calculation to prevent UI flicker
+  // const progressData = useMemo(() => {
+  //   let recToUse = projectRec;
+  //   if (!recToUse && projectId) {
+  //     const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+  //     recToUse = db[projectId];
+  //   }
+    
+  //   const { completedSet } = computeProgress(recToUse || {});
+  //   const count = Math.min(completedSet.size, totalTarget);
+  //   return {
+  //     completedSet,
+  //     completedCount: count,
+  //     overallPercent: Math.round((count / totalTarget) * 100)
+  //   };
+  // }, [projectRec, projectId]);
+
+  // const { completedSet, completedCount, overallPercent } = progressData;
+  // 🆕 NEW: Official Loading State for the Sidebar
+  const progressData = useMemo(() => {
+    if (!projectRec) {
+      // Return a temporary loading state while the database is fetching
+      return { completedSet: new Set(), completedCount: 0, overallPercent: 0, isProgressLoading: true };
+    }
+    const { completedSet } = computeProgress(projectRec);
+    const count = Math.min(completedSet.size, totalTarget);
+    return {
+      completedSet,
+      completedCount: count,
+      overallPercent: Math.round((count / totalTarget) * 100),
+      isProgressLoading: false
+    };
+  }, [projectRec]);
+
+  const { completedSet, completedCount, overallPercent, isProgressLoading } = progressData;
   
 
   // 🔁 Restore "draft generated" flag (from meta or localStorage)
@@ -699,12 +770,12 @@ const { completedSet } = computeProgress(projectRec);
   );
   
   // Ensure Draft tab is unlocked if the persisted flag exists
-  useEffect(() => {
-    if (draftGeneratedPersisted) {
-      setIsDraftUnlocked(true);
-      setShowGenerateDraft(false);
-    }
-  }, [draftGeneratedPersisted]);
+  // useEffect(() => {
+  //   if (draftGeneratedPersisted) {
+  //     setIsDraftUnlocked(true);
+  //     setShowGenerateDraft(false);
+  //   }
+  // }, [draftGeneratedPersisted]);
   
   // ✅ 2. Read segments safely once projectRec is loaded
   // ✅ 2. Read segments safely and stably
@@ -906,7 +977,6 @@ const rawCandidate =
   const [isBulkTranslating, setIsBulkTranslating] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0, failed: 0 });
 
-
   // ✅ NEW: AUTO-SAVE REAL-TIME TRANSLATIONS & LANGUAGE TO DATABASE
   useEffect(() => {
     if (!projectId || Object.keys(segOverrides).length === 0 || isBulkTranslating) return;
@@ -920,7 +990,7 @@ const rawCandidate =
       // 🆕 Also save the target language so it survives sidebar navigation!
       updateProjectMeta(projectId, { 
         segmentsP2: mergedSegments, 
-        segmentsP3: mergedSegments, 
+        //segmentsP3: mergedSegments, 
         targetLang: inboundLang 
       });
     }, 1000);
@@ -952,26 +1022,80 @@ const allSegmentsCompleted = useMemo(() => {
   });
 }, [segments, segOverrides]);
 // ✅ NEW: Auto-Unlock the Draft Tab ONLY when translations are 100% complete
-  // useEffect(() => {
-  //   if (allSegmentsCompleted) {
-  //     setIsDraftUnlocked(true);
-  //   } else {
-  //     setIsDraftUnlocked(false);
-  //     if (activeTab === "draft") {
-  //       setActiveTab("workspace");
-  //     }
-  //   }
-  // }, [allSegmentsCompleted, activeTab]);
+  useEffect(() => {
+    if (!allSegmentsCompleted) {
+      setIsDraftUnlocked(false);
+    //} else {
+      //setIsDraftUnlocked(false);
+      // If the user deletes a translation while viewing the draft, kick them back to the workspace
+      if (activeTab === "draft") {
+        setActiveTab("workspace");
+      }
+    }
+  }, [allSegmentsCompleted, activeTab]);
 
 /** Show success banner only when all complete AND draft is still locked */
+// useEffect(() => {
+//     const canShow = allSegmentsCompleted && !isDraftUnlocked && !draftGeneratedPersisted;
+//     setShowGenerateDraft(canShow);
+//   }, [allSegmentsCompleted, isDraftUnlocked, draftGeneratedPersisted]);
 useEffect(() => {
-    const canShow = allSegmentsCompleted && !isDraftUnlocked && !draftGeneratedPersisted;
-    setShowGenerateDraft(canShow);
-  }, [allSegmentsCompleted, isDraftUnlocked, draftGeneratedPersisted]);
+    setShowGenerateDraft(allSegmentsCompleted && !isDraftUnlocked);
+  }, [allSegmentsCompleted, isDraftUnlocked]);
 
   /** Draft state for same-page tab */
   const [draftSegments, setDraftSegments] = useState([]);
   const [tmLeveragePct, setTmLeveragePct] = useState(0);
+
+  // 🆕 NEW: Auto-calculate using the EXACT logic from TMLeverageOverview.jsx
+  useEffect(() => {
+    // 1. Merge segments with user overrides so we have the latest text/scores
+    const mergedSegments = segments.map((s) => {
+      const o = segOverrides[s.id] || {};
+      return { ...s, ...o };
+    });
+
+    if (mergedSegments.length === 0) return;
+
+    // 2. Use the exact variables from TMLeverageOverview
+    let exact = 0;
+    let fuzzy = 0;
+    
+    mergedSegments.forEach((seg) => {
+      let rawScore = 0;
+
+      // Exact logic from TMLeverageOverview Case A, B, and C
+      if (typeof seg.matchScore === 'number') {
+          rawScore = seg.matchScore;
+      } else if (seg.reviewData && typeof seg.reviewData.tmScore === 'number') {
+          rawScore = seg.reviewData.tmScore <= 1 
+            ? seg.reviewData.tmScore * 100 
+            : seg.reviewData.tmScore;
+      } else if (seg.translated && seg.translated.trim() !== "" && seg.translated.trim() !== "— Awaiting translation —") {
+          rawScore = 100;
+      }
+
+      const score = Math.round(rawScore);
+
+      // Exact Classification Logic
+      if (score >= 95) {
+          exact++;      // Tier 1: Exact Match
+      } else if (score >= 70) {
+          fuzzy++;      // Tier 2: Fuzzy / Context Match
+      }
+    });
+
+    const total = mergedSegments.length;
+    
+    // Exact Leverage Rate formula
+    const leverageRate = total > 0 ? Math.round(((exact + fuzzy) / total) * 100) : 0;
+
+    // 3. Set the state so the Draft Panel receives it
+    setTmLeveragePct(leverageRate);
+  }, [segments, segOverrides]);
+
+
+
   const [draftPrepared, setDraftPrepared] = useState(false); // to control empty state
   const [tmMatchInfo, setTmMatchInfo] = useState({}); // Stores match percentages by segment ID [cite: 34, 89]
 
@@ -1085,7 +1209,7 @@ useEffect(() => {
     // ✅ Persist P2 outputs for downstream resume AND seed P3
     updateProjectMeta(projectId, { 
       segmentsP2: mergedSegments,
-      segmentsP3: mergedSegments // 🆕 SEED PHASE 3 SO IT HAS DATA IMMEDIATELY
+      //segmentsP3: mergedSegments // 🆕 SEED PHASE 3 SO IT HAS DATA IMMEDIATELY
     });
 
     const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
@@ -1626,12 +1750,29 @@ const handleGenerateDraftTranslation = () => {
       {/* Sidebar */}
       <aside className="tm-sidebar">
         {/* Global Progress Section */}
-        <div className="tm-sidebar-progress">
+        {/* <div className="tm-sidebar-progress">
           <div className="tm-progress-row">
             <span className="tm-progress-label">Overall Progress</span>
             <span className="tm-progress-value">{overallPercent}%</span>
           </div>
           <div className="tm-progress-sub">{completedCount} of {totalTarget} phases completed</div>
+         
+          <div className="tm-progress-bar">
+            <div
+              className="tm-progress-fill"
+              style={{ width: `${overallPercent}%`, transition: 'width 0.4s ease-out' }}
+            />
+          </div>
+        </div> */}
+        {/* Global Progress Section */}
+        <div className="tm-sidebar-progress" style={{ opacity: isProgressLoading ? 0.6 : 1, transition: 'opacity 0.3s' }}>
+          <div className="tm-progress-row">
+            <span className="tm-progress-label">Overall Progress</span>
+            {/* 🆕 Show ... while loading */}
+            <span className="tm-progress-value">{isProgressLoading ? "..." : `${overallPercent}%`}</span>
+          </div>
+          {/* 🆕 Show Syncing... while loading */}
+          <div className="tm-progress-sub">{isProgressLoading ? "Syncing..." : `${completedCount} of ${totalTarget} phases completed`}</div>
          
           <div className="tm-progress-bar">
             <div
@@ -1663,9 +1804,9 @@ const handleGenerateDraftTranslation = () => {
                 </span>
                
                 {/* Show checkmark if completed globally */}
-                {isDone && <span className="tm-phase-check">✓</span>}
+                {isDone && !isProgressLoading && <span className="tm-phase-check">✓</span>}
                 {/* Show dot if active but not yet completed */}
-                {p.status === "active" && !isDone && <span className="tm-phase-dot" />}
+                {p.status === "active" && !isDone && !isProgressLoading && <span className="tm-phase-dot" />}
               </button>
             );
           })}
@@ -1752,10 +1893,8 @@ const handleGenerateDraftTranslation = () => {
             onClick={() => {
               if (isDraftUnlocked) setActiveTab("draft");
             }}
-            disabled={!isDraftUnlocked}
-  title={isDraftUnlocked ? 'Open Draft Translation' : 'Generate Draft Translation to open'}
-            // style={!isDraftUnlocked ? { opacity: 0.5, cursor: "not-allowed" } : {}}
-            // title={!isDraftUnlocked ? "Please translate all segments to unlock the Draft" : "View compiled draft"}
+            style={!isDraftUnlocked ? { opacity: 0.5, cursor: "not-allowed" } : {}}
+            title={!isDraftUnlocked ? "Please translate all segments to unlock the Draft" : "View compiled draft"}
           >
             <CheckCircle2 size={16} />
             Draft Translation
@@ -1870,6 +2009,13 @@ const handleGenerateDraftTranslation = () => {
       </div>
     </div>
   </section>
+  {/* 🆕 NEW: LOADING GATE STARTS HERE */}
+  {isLoadingProject ? (
+    <div className="tm-workspace-loading" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 0', color: '#6B7280' }}>
+      <Loader2 size={32} className="animate-spin mb-4 text-emerald-600" />
+      <p>Syncing....</p>
+    </div>
+  ) : (
   <section className="tm-workspace">
           {/* Left card: Segments list (unchanged) */}
           <div className="tm-card tm-left">
@@ -2198,7 +2344,7 @@ return (
               projectName: projectName,
               targetLang: inboundLang || "EN",
               sourceLang: "English",
-              allSegments: segments
+              allSegments: mergeSegmentsWithOverrides(segments, segOverrides)
             }
           });
         }}
@@ -2251,6 +2397,7 @@ return (
             </div>
           </div>
         </section>
+  )}
         </div>
          )}
         {/* Integrated Draft tab content (same page) */}
