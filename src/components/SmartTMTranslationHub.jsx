@@ -745,6 +745,7 @@ const totalTarget = 4;
 
   // const { completedSet, completedCount, overallPercent } = progressData;
   // 🆕 NEW: Official Loading State for the Sidebar
+  //Hari-24/3
   const progressData = useMemo(() => {
     if (!projectRec) {
       // Return a temporary loading state while the database is fetching
@@ -1194,6 +1195,7 @@ useEffect(() => {
 
   /** Complete Phase → go to Cultural Adaptation (preserving translated text) */
   /** Complete Phase → go to Cultural Adaptation (preserving translated text) */
+  //Hari
   const handleCompletePhase = async()=> {
     if (!allSegmentsCompleted) {
       alert("Please translate all segments before completing this phase.");
@@ -1207,7 +1209,8 @@ useEffect(() => {
     }));
 
     // ✅ Persist P2 outputs for downstream resume AND seed P3
-    updateProjectMeta(projectId, { 
+    //Hari
+    await updateProjectMeta(projectId, { 
       segmentsP2: mergedSegments,
       //segmentsP3: mergedSegments // 🆕 SEED PHASE 3 SO IT HAS DATA IMMEDIATELY
     });
@@ -1718,7 +1721,8 @@ const handleGenerateDraftTranslation = () => {
   //   });
   // };
   /** Send to CI (from Draft panel) */
-  const handleSendToCI = (normalizedDraftSegments) => {
+  //Hari - 24/3
+  const handleSendToCI = async (normalizedDraftSegments) => {
     
     // Persist P2 + "draft generated" flag before leaving
     // try {
@@ -1730,9 +1734,10 @@ const handleGenerateDraftTranslation = () => {
     // } catch (e) {
     //   console.warn('Failed to persist segmentsP2 before sending to CI', e);
     // }
-    setP2DraftGenerated(projectId, true, { segmentsP2: normalizedDraftSegments });
+    //Hari - 24/3
+    await setP2DraftGenerated(projectId, true, { segmentsP2: normalizedDraftSegments });
     localStorage.setItem(`p2_draft_generated_${projectId}`, "true");
-    markPhaseComplete(projectId, 'P2');    
+    await markPhaseComplete(projectId, 'P2');    
       navigate("/culturalAdaptationWorkspace", {
         state: {
           projectId,
@@ -1765,6 +1770,7 @@ const handleGenerateDraftTranslation = () => {
           </div>
         </div> */}
         {/* Global Progress Section */}
+        {/*Hari-24/3*/}
         <div className="tm-sidebar-progress" style={{ opacity: isProgressLoading ? 0.6 : 1, transition: 'opacity 0.3s' }}>
           <div className="tm-progress-row">
             <span className="tm-progress-label">Overall Progress</span>
@@ -1772,7 +1778,7 @@ const handleGenerateDraftTranslation = () => {
             <span className="tm-progress-value">{isProgressLoading ? "..." : `${overallPercent}%`}</span>
           </div>
           {/* 🆕 Show Syncing... while loading */}
-          <div className="tm-progress-sub">{isProgressLoading ? "Syncing..." : `${completedCount} of ${totalTarget} phases completed`}</div>
+          <div className="tm-progress-sub">{isProgressLoading ? "Loading..." : `${completedCount} of ${totalTarget} phases completed`}</div>
          
           <div className="tm-progress-bar">
             <div

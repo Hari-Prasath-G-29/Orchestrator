@@ -41,23 +41,40 @@ const refreshProgress = async () => {
   const totalTarget = 4; // Your requirement
   
   // 🆕 Synchronous progress calculation to prevent UI flicker
-  const progressData = useMemo(() => {
-    let recToUse = projectRec;
-    if (!recToUse && projectId) {
-      const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
-      recToUse = db[projectId];
-    }
+  // const progressData = useMemo(() => {
+  //   let recToUse = projectRec;
+  //   if (!recToUse && projectId) {
+  //     const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+  //     recToUse = db[projectId];
+  //   }
     
-    const { completedSet } = computeProgress(recToUse || {});
+  //   const { completedSet } = computeProgress(recToUse || {});
+  //   const count = Math.min(completedSet.size, totalTarget);
+  //   return {
+  //     completedSet,
+  //     completedCount: count,
+  //     overallPercent: Math.round((count / totalTarget) * 100)
+  //   };
+  // }, [projectRec, projectId]);
+
+  // 🆕 NEW: Official Loading State for the Sidebar
+  //Hari-24/3
+  const progressData = useMemo(() => {
+    if (!projectRec) {
+      return { completedSet: new Set(), completedCount: 0, overallPercent: 0, isProgressLoading: true };
+    }
+    const { completedSet } = computeProgress(projectRec);
     const count = Math.min(completedSet.size, totalTarget);
     return {
       completedSet,
       completedCount: count,
-      overallPercent: Math.round((count / totalTarget) * 100)
+      overallPercent: Math.round((count / totalTarget) * 100),
+      isProgressLoading: false
     };
-  }, [projectRec, projectId]);
+  }, [projectRec]);
 
-  const { completedSet, completedCount, overallPercent } = progressData;
+  const { completedSet, completedCount, overallPercent, isProgressLoading } = progressData;
+  // const { completedSet, completedCount, overallPercent } = progressData;
 
  // From previous page (if passed)
  const projectName =
@@ -443,7 +460,8 @@ const toggleAdditionalAudience = (aud) => {
     ? `Fix error before proceeding: ${segError}`
     : "Proceed to Phase 2";
 
-  const handleComplete = async () => {
+  //Hari
+  const handleComplete = async() => {
 
   if (!canCompleteP1) return;
 
@@ -458,7 +476,7 @@ const toggleAdditionalAudience = (aud) => {
 
 // ✅ Persist any context you’ve collected here as REAL meta
 
-updateProjectMeta(projectId, {
+await updateProjectMeta(projectId, {
        assetType,
        therapeuticContext,
        indication,
@@ -480,7 +498,7 @@ updateProjectMeta(projectId, {
   
       await markPhaseComplete(projectId, "P1");
 // ✅ Explicitly reset P2 flags for this new asset
- resetP2DraftState(projectId);
+await resetP2DraftState(projectId);
 
 
        const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
@@ -494,22 +512,21 @@ updateProjectMeta(projectId, {
   return (
     <div className={`gac-page ${isFocusMode ? 'is-focus' : ''}`} data-page="gac">
       {/* Sidebar */}
+      {/* Hari-24/3 */}
       {!isFocusMode && (<aside className="gac-sidebar">
-    <div className="sidebar-header">
+        <div className="sidebar-header" style={{ opacity: isProgressLoading ? 0.6 : 1, transition: 'opacity 0.3s' }}>
       <div className="progress-row">
         <span className="progress-label">Overall Progress</span>
-        {/* Updated to use dynamic overallPercent */}
-        <span className="progress-value">{overallPercent}%</span>
+        <span className="progress-value">{isProgressLoading ? "..." : `${overallPercent}%`}</span>
       </div>
      
-      {/* The Visual Progress Bar (Background and Fill) */}
       <div className="progress-bar-bg" style={{ height: '4px', background: '#e0e0e0', borderRadius: '2px', margin: '8px 0' }}>
         <div
           className="progress-bar-fill"
           style={{
             width: `${overallPercent}%`,
             height: '100%',
-            background: '#007bff', // Match your theme's blue
+            background: '#007bff', 
             borderRadius: '2px',
             transition: 'width 0.3s ease'
           }}
@@ -517,8 +534,7 @@ updateProjectMeta(projectId, {
       </div>
  
       <div className="progress-sub">
-        {/* Updated to show 0/4, 1/4, etc. */}
-        {completedCount} of 4 phases completed
+        {isProgressLoading ? 'Loading...' : `${completedCount} of 4 phases completed`}
       </div>
     </div>
  

@@ -73,6 +73,7 @@ export default function CulturalAdaptationWorkspace({
 
   // 🆕 NEW: Official Loading State for the Sidebar
   // 🆕 NEW: Official Loading State for the Sidebar
+  //Hari-24/3
   const progressData = useMemo(() => {
     if (!projectRec) {
       // Return a temporary loading state while the database is fetching
@@ -880,6 +881,7 @@ useEffect(() => {
 //     gotoPhase('P4');
 //   };
 /** Complete Phase 3 → next page */
+//Hari
   const handleCompletePhase = async() => {
     const mergedSegments = segments.map((s) => {
       const o = segOverrides[s.id] || {};
@@ -892,9 +894,10 @@ useEffect(() => {
     });
 
    // ✅ Persist P3 outputs AND seed P4 (Using await ensures it finishes saving)
+   //Hari
    await updateProjectMeta(projectId, { 
      segmentsP3: mergedSegments,
-     //segmentsP4: mergedSegments // 🆕 SEED PHASE 4
+     segmentsP4: mergedSegments // 🆕 SEED PHASE 4
    });
 
    // ✅ Mark P3 complete
@@ -1591,138 +1594,249 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
   };
 
   /** ========= PDF GENERATION: AGENCY HANDOFF ========= */
-  const handleGeneratePDF = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
+  // const handleGeneratePDF = () => {
+  //   const doc = new jsPDF();
+  //   const pageWidth = doc.internal.pageSize.getWidth();
+  //   const margin = 20;
  
-    // Helper: Centered text
-    const addCenteredText = (text, y, size, isBold = false) => {
-      doc.setFontSize(size);
-      doc.setFont("helvetica", isBold ? "bold" : "normal");
-      const textWidth = doc.getTextWidth(text);
-      doc.text(text, (pageWidth - textWidth) / 2, y);
-    };
+  //   // Helper: Centered text
+  //   const addCenteredText = (text, y, size, isBold = false) => {
+  //     doc.setFontSize(size);
+  //     doc.setFont("helvetica", isBold ? "bold" : "normal");
+  //     const textWidth = doc.getTextWidth(text);
+  //     doc.text(text, (pageWidth - textWidth) / 2, y);
+  //   };
  
-    // Helper: Word-wrapped text
-    const addWrappedText = (text, y, size) => {
-      doc.setFontSize(size);
-      doc.setFont("helvetica", "normal");
-      const lines = doc.splitTextToSize(text || "—", pageWidth - margin * 2);
-      doc.text(lines, margin, y);
-      return y + (lines.length * (size * 0.45)); // return approximate new Y position
-    };
+  //   // Helper: Word-wrapped text
+  //   const addWrappedText = (text, y, size) => {
+  //     doc.setFontSize(size);
+  //     doc.setFont("helvetica", "normal");
+  //     const lines = doc.splitTextToSize(text || "—", pageWidth - margin * 2);
+  //     doc.text(lines, margin, y);
+  //     return y + (lines.length * (size * 0.45)); // return approximate new Y position
+  //   };
  
-    // --- PAGE 1: TITLE PAGE ---
-    addCenteredText("CULTURAL INTELLIGENCE", 70, 24, true);
-    addCenteredText("PLAYBOOK", 85, 24, true);
+  //   // --- PAGE 1: TITLE PAGE ---
+  //   addCenteredText("CULTURAL INTELLIGENCE", 70, 24, true);
+  //   addCenteredText("PLAYBOOK", 85, 24, true);
  
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    const safeLang = state?.lang || getTargetLang(therapyArea) || "DE";
-    doc.text(`Project: ${projectName}`, margin, 130);
-    doc.text(`Target Market: ${country || safeLang.toUpperCase()}`, margin, 140);
-    doc.text(`Target Language: ${safeLang.toLowerCase()}`, margin, 150);
-    doc.text(`Therapeutic Area: ${therapyArea || "N/A"}`, margin, 160);
-    const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    doc.text(`Generated: ${dateStr}`, margin, 170);
+  //   doc.setFontSize(12);
+  //   doc.setFont("helvetica", "normal");
+  //   const safeLang = state?.lang || getTargetLang(therapyArea) || "DE";
+  //   doc.text(`Project: ${projectName}`, margin, 130);
+  //   doc.text(`Target Market: ${country || safeLang.toUpperCase()}`, margin, 140);
+  //   doc.text(`Target Language: ${safeLang.toLowerCase()}`, margin, 150);
+  //   doc.text(`Therapeutic Area: ${therapyArea || "N/A"}`, margin, 160);
+  //   const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  //   doc.text(`Generated: ${dateStr}`, margin, 170);
  
-    // --- PAGE 2: EXECUTIVE SUMMARY ---
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("EXECUTIVE SUMMARY", margin, 30);
+  //   // --- PAGE 2: EXECUTIVE SUMMARY ---
+  //   doc.addPage();
+  //   doc.setFontSize(16);
+  //   doc.setFont("helvetica", "bold");
+  //   doc.text("EXECUTIVE SUMMARY", margin, 30);
  
-    // Calculate Metrics
-    let totalScore = 0;
-    let scoredItems = 0;
-    let adaptedCount = 0;
-    segments.forEach(s => {
-      const analysis = analysisBySegment[s.id];
-      if (analysis && typeof analysis.overallScore === 'number') {
-        totalScore += analysis.overallScore;
-        scoredItems++;
-      }
-      if (segOverrides[s.id]?.adapted) adaptedCount++;
-    });
-    const avgScore = scoredItems > 0 ? Math.round(totalScore / scoredItems) : 0;
+  //   // Calculate Metrics
+  //   let totalScore = 0;
+  //   let scoredItems = 0;
+  //   let adaptedCount = 0;
+  //   segments.forEach(s => {
+  //     const analysis = analysisBySegment[s.id];
+  //     if (analysis && typeof analysis.overallScore === 'number') {
+  //       totalScore += analysis.overallScore;
+  //       scoredItems++;
+  //     }
+  //     if (segOverrides[s.id]?.adapted) adaptedCount++;
+  //   });
+  //   const avgScore = scoredItems > 0 ? Math.round(totalScore / scoredItems) : 0;
  
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total Segments Analyzed: ${segments.length}`, margin, 50);
-    doc.text(`Segments Requiring Cultural Adaptation: ${adaptedCount}`, margin, 60);
-    doc.text(`High/Critical Priority Changes: 0`, margin, 70); 
-    doc.text(`Overall Cultural Appropriateness Score: ${avgScore}/100`, margin, 80);
+  //   doc.setFontSize(12);
+  //   doc.setFont("helvetica", "normal");
+  //   doc.text(`Total Segments Analyzed: ${segments.length}`, margin, 50);
+  //   doc.text(`Segments Requiring Cultural Adaptation: ${adaptedCount}`, margin, 60);
+  //   doc.text(`High/Critical Priority Changes: 0`, margin, 70); 
+  //   doc.text(`Overall Cultural Appropriateness Score: ${avgScore}/100`, margin, 80);
  
-    doc.setFont("helvetica", "bold");
-    doc.text("KEY RECOMMENDATIONS:", margin, 105);
-    const recText = "This playbook provides segment-by-segment cultural intelligence analysis for the target market. Each segment includes specific action recommendations (REVIEW, REPLACE, REMOVE, or APPROVE), cultural proverbs where applicable, tone analysis, and market-specific guidance.";
-    addWrappedText(recText, 115, 12);
+  //   doc.setFont("helvetica", "bold");
+  //   doc.text("KEY RECOMMENDATIONS:", margin, 105);
+  //   const recText = "This playbook provides segment-by-segment cultural intelligence analysis for the target market. Each segment includes specific action recommendations (REVIEW, REPLACE, REMOVE, or APPROVE), cultural proverbs where applicable, tone analysis, and market-specific guidance.";
+  //   addWrappedText(recText, 115, 12);
  
-    // --- PAGES 3+: SEGMENT LOOP ---
-    segments.forEach((seg, idx) => {
-      doc.addPage();
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text(`SEGMENT ${idx + 1}`, margin, 30);
+  //   // --- PAGES 3+: SEGMENT LOOP ---
+  //   segments.forEach((seg, idx) => {
+  //     doc.addPage();
+  //     doc.setFontSize(14);
+  //     doc.setFont("helvetica", "bold");
+  //     doc.text(`SEGMENT ${idx + 1}`, margin, 30);
  
-      doc.setFontSize(12);
-      doc.text("Original Translation:", margin, 45);
-      let currentY = addWrappedText(seg.translated || seg.source || "—", 55, 11);
+  //     doc.setFontSize(12);
+  //     doc.text("Original Translation:", margin, 45);
+  //     let currentY = addWrappedText(seg.translated || seg.source || "—", 55, 11);
  
-      // Include adapted text if the user approved changes
-      const adaptedText = segOverrides[seg.id]?.adapted;
-      if (adaptedText) {
-        doc.setFont("helvetica", "bold");
-        currentY += 10;
-        doc.text("Culturally Adapted Translation:", margin, currentY);
-        currentY += 10;
-        currentY = addWrappedText(adaptedText, currentY, 11);
-      }
+  //     // Include adapted text if the user approved changes
+  //     const adaptedText = segOverrides[seg.id]?.adapted;
+  //     if (adaptedText) {
+  //       doc.setFont("helvetica", "bold");
+  //       currentY += 10;
+  //       doc.text("Culturally Adapted Translation:", margin, currentY);
+  //       currentY += 10;
+  //       currentY = addWrappedText(adaptedText, currentY, 11);
+  //     }
  
-      const score = analysisBySegment[seg.id]?.overallScore || 0;
-      doc.setFont("helvetica", "bold");
-      currentY += 15;
-      doc.text(`Cultural Appropriateness Score: ${score}/100`, margin, currentY);
-    });
+  //     const score = analysisBySegment[seg.id]?.overallScore || 0;
+  //     doc.setFont("helvetica", "bold");
+  //     currentY += 15;
+  //     doc.text(`Cultural Appropriateness Score: ${score}/100`, margin, currentY);
+  //   });
  
-    // --- FINAL PAGE: IMPLEMENTATION CHECKLIST ---
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("IMPLEMENTATION CHECKLIST", margin, 30);
+  //   // --- FINAL PAGE: IMPLEMENTATION CHECKLIST ---
+  //   doc.addPage();
+  //   doc.setFontSize(16);
+  //   doc.setFont("helvetica", "bold");
+  //   doc.text("IMPLEMENTATION CHECKLIST", margin, 30);
  
-    const checklist = [
-      "Review all REPLACE recommendations with native speakers",
-      "Implement high/critical priority changes first",
-      "Validate tone appropriateness with local stakeholders",
-      "Apply cultural proverbs where suggested",
-      "Verify formality levels match target audience expectations",
-      "Submit culturally adapted content for regulatory review",
-      "Conduct final quality assurance with in-market experts",
-      "Document all changes for audit trail"
-    ];
+  //   const checklist = [
+  //     "Review all REPLACE recommendations with native speakers",
+  //     "Implement high/critical priority changes first",
+  //     "Validate tone appropriateness with local stakeholders",
+  //     "Apply cultural proverbs where suggested",
+  //     "Verify formality levels match target audience expectations",
+  //     "Submit culturally adapted content for regulatory review",
+  //     "Conduct final quality assurance with in-market experts",
+  //     "Document all changes for audit trail"
+  //   ];
  
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    let chkY = 50;
-    checklist.forEach(item => {
-      // Draw a literal checkbox square
-      doc.rect(margin, chkY - 4, 4, 4); 
-      doc.text(item, margin + 8, chkY);
-      chkY += 12;
-    });
+  //   doc.setFontSize(12);
+  //   doc.setFont("helvetica", "normal");
+  //   let chkY = 50;
+  //   checklist.forEach(item => {
+  //     // Draw a literal checkbox square
+  //     doc.rect(margin, chkY - 4, 4, 4); 
+  //     doc.text(item, margin + 8, chkY);
+  //     chkY += 12;
+  //   });
  
-    // Trigger Download
-    const isoDate = new Date().toISOString().split('T')[0];
-    doc.save(`Cultural-Intelligence-Playbook-${safeLang.toUpperCase()}-${isoDate}.pdf`);
-  };
+  //   // Trigger Download
+  //   const isoDate = new Date().toISOString().split('T')[0];
+  //   doc.save(`Cultural-Intelligence-Playbook-${safeLang.toUpperCase()}-${isoDate}.pdf`);
+  // };
 
+  const handleGeneratePDF = async () => {
+
+  try {
+
+    // --- 1. PREPARE THE DATA (Same logic as your jsPDF code) ---
+
+    let totalScore = 0;
+
+    let scoredItems = 0;
+
+    let adaptedCount = 0;
+ 
+    const processedSegments = segments.map((s) => {
+
+      const analysis = analysisBySegment[s.id];
+
+      const adaptedText = segOverrides[s.id]?.adapted;
+ 
+      if (analysis && typeof analysis.overallScore === 'number') {
+
+        totalScore += analysis.overallScore;
+
+        scoredItems++;
+
+      }
+
+      if (adaptedText) adaptedCount++;
+ 
+      return {
+
+        id: s.id,
+
+        original: s.translated || s.source || "—",
+
+        adapted: adaptedText || null,
+
+        score: analysis?.overallScore || 0
+
+      };
+
+    });
+ 
+    const avgScore = scoredItems > 0 ? Math.round(totalScore / scoredItems) : 0;
+
+    const safeLang = state?.lang || getTargetLang(therapyArea) || "DE";
+ 
+    // --- 2. SEND TO PYTHON ---
+
+    const response = await fetch('http://localhost:5000/generate-pdf', {
+
+      method: 'POST',
+
+      headers: { 'Content-Type': 'application/json' },
+
+      body: JSON.stringify({
+
+        projectName: projectNameProp || "Project",
+
+        targetMarket: country || safeLang.toUpperCase(),
+
+        targetLang: safeLang.toLowerCase(),
+
+        therapyArea: therapyArea || "N/A",
+
+        summary: {
+
+          totalSegments: segments.length,
+
+          adaptedCount: adaptedCount,
+
+          avgScore: avgScore
+
+        },
+
+        segments: processedSegments
+
+      }),
+
+    });
+ 
+    if (!response.ok) throw new Error("Backend error");
+ 
+    const blob = await response.blob();
+
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+
+    link.href = url;
+
+    const isoDate = new Date().toISOString().split('T')[0];
+
+    link.setAttribute('download', `Playbook-${safeLang.toUpperCase()}-${isoDate}.pdf`);
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+ 
+  } catch (error) {
+
+    console.error("PDF Error:", error);
+
+    alert("Could not generate PDF. Please ensure the Python server is running.");
+
+  }
+
+};
+ 
   return (
     <div className="cultural-page">
     {/* <div className={`cultural-page tm-app ${isFocusMode ? 'is-focus' : ''}`}> */}
     <div className={`tm-app ${isFocusMode ? 'is-focus' : ''}`}>
       {/* Sidebar */}
+      {/*Hari-24/3*/}
       <aside className="tm-sidebar" aria-label="Workflow Phases">
   {/* Global Progress Section */}
         <div className="tm-sidebar-progress" style={{ opacity: isProgressLoading ? 0.6 : 1, transition: 'opacity 0.3s' }}>
@@ -1732,7 +1846,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
             <span className="tm-progress-value">{isProgressLoading ? "..." : `${overallPercent}%`}</span>
           </div>
           {/* 🆕 Show Syncing... while loading */}
-          <div className="tm-progress-sub">{isProgressLoading ? "Syncing..." : `${completedCount} of ${totalTarget} phases completed`}</div>
+          <div className="tm-progress-sub">{isProgressLoading ? "Loading..." : `${completedCount} of ${totalTarget} phases completed`}</div>
          
           <div className="tm-progress-bar">
             <div

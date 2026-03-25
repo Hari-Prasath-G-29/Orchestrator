@@ -61,30 +61,55 @@ export default function RegulatoryComplianceHub({
   //   return { count, percent, set: completedSet };
   // }, [projectRec]);
   // Wrap in useMemo for performance and safety
-  const progressData = useMemo(() => {
-    // 🆕 1. Check local storage synchronously to stop the progress bar jumping
-    let recToUse = projectRec;
-    if (!recToUse && projectId) {
-      const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
-      recToUse = db[projectId];
-    }
+  // const progressData = useMemo(() => {
+  //   // 🆕 1. Check local storage synchronously to stop the progress bar jumping
+  //   let recToUse = projectRec;
+  //   if (!recToUse && projectId) {
+  //     const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+  //     recToUse = db[projectId];
+  //   }
 
-    // 2. Safe fallback if completely empty
-    if (!recToUse) {
-      return { count: 3, percent: 75, set: new Set(['P1', 'P2', 'P3']) };
+  //   // 2. Safe fallback if completely empty
+  //   if (!recToUse) {
+  //     return { count: 3, percent: 'Loading...' , set: new Set(['P1', 'P2', 'P3']) };
+  //   }
+ 
+  //   const { completedSet } = computeProgress(recToUse);
+  //   const count = Math.min(completedSet.size, totalTargetPhases);
+  //   const percent = Math.round((count / totalTargetPhases) * 100);
+ 
+  //   return { count, percent, set: completedSet };
+  // }, [projectRec, projectId]);
+ 
+  // // Unified variable names to match all your JSX parts
+  // const completedCount = progressData.count;
+  // const overallPercent = progressData.percent;
+  // const completedSet   = progressData.set;
+ 
+  // // Aliases to prevent "ReferenceError" in different parts of your file
+  // const overallPct  = overallPercent;
+  // const progressPct = overallPercent;
+
+  // ✅ 1. UPDATED: Provide the isProgressLoading state
+  //Hari-24/3
+  const progressData = useMemo(() => {
+    if (!projectRec) {
+      // Return a temporary loading state while the database is fetching
+      return { count: 0, percent: 0, set: new Set(), isProgressLoading: true };
     }
  
-    const { completedSet } = computeProgress(recToUse);
+    const { completedSet } = computeProgress(projectRec);
     const count = Math.min(completedSet.size, totalTargetPhases);
     const percent = Math.round((count / totalTargetPhases) * 100);
  
-    return { count, percent, set: completedSet };
-  }, [projectRec, projectId]);
+    return { count, percent, set: completedSet, isProgressLoading: false };
+  }, [projectRec]);
  
   // Unified variable names to match all your JSX parts
   const completedCount = progressData.count;
   const overallPercent = progressData.percent;
   const completedSet   = progressData.set;
+  const isProgressLoading = progressData.isProgressLoading; // 🆕 Extracted safely!
  
   // Aliases to prevent "ReferenceError" in different parts of your file
   const overallPct  = overallPercent;
@@ -153,7 +178,7 @@ export default function RegulatoryComplianceHub({
       import.meta.env &&
       import.meta.env.VITE_N8N_COMPLIANCE_URL) ||
     process.env.REACT_APP_N8N_COMPLIANCE_URL ||
-    "http://172.16.4.237:8031/webhook/regulatory";
+    "http://172.16.4.237:8033/webhook-test/regulatory";
 
   /* ================= LANGUAGE HELPERS ================= */
   const getTargetLang = (therapyAreaStr) => {
@@ -699,10 +724,12 @@ export default function RegulatoryComplianceHub({
     setIsAnalysisModalOpen(false);
   };
 
+  //Hari
   const handleCompleteCompliance = async () => {
     if (!projectId) return;
     try {
       // 1. Mark Phase 4 (Regulatory) as complete in the DB
+      //Hari
       await markPhaseComplete(projectId, 'P4');
      
       // 2. Trigger the local event to refresh the progress bar immediately
@@ -953,16 +980,20 @@ const overallComplianceScoreFromModal = analysisData?.score ?? null; // number |
   return (
     <div className={`regulatory tm-app ${isFocusMode ? 'is-focus' : ''}`}>
       {/* Sidebar */}
-     <aside className="tm-sidebar" aria-label="Workflow Phases">
-  <div className="tm-sidebar-progress">
+         <aside className="tm-sidebar" aria-label="Workflow Phases">
+          {/* ✅ ADDED: Opacity fade when loading */}
+          {/* Hari-24/3 */}
+  <div className="tm-sidebar-progress" style={{ opacity: isProgressLoading ? 0.6 : 1, transition: 'opacity 0.3s' }}>
     <div className="tm-progress-row">
       <span className="tm-progress-label">Overall Progress</span>
-      {/* Percentage value matches the bar fill */}
-      <span className="tm-progress-value">{overallPercent}%</span>
+      {/* ✅ FIXED: Show "..." while loading instead of 0% */}
+      <span className="tm-progress-value">
+        {isProgressLoading ? "..." : `${overallPercent}%`}
+      </span>
     </div>
     <div className="tm-progress-sub">
-      {/* Dynamic text: "3 / 4 phases completed" */}
-      {completedCount} / {totalTargetPhases} phases completed
+      {/* ✅ FIXED: Show "Syncing..." instead of 0 / 4 */}
+      {isProgressLoading ? "Loading..." : `${completedCount} / ${totalTargetPhases} phases completed`}
     </div>
     <div
       className="tm-progress-bar"
@@ -971,7 +1002,6 @@ const overallComplianceScoreFromModal = analysisData?.score ?? null; // number |
       aria-valuemax={100}
       aria-valuenow={overallPercent}
     >
-      {/* Fill width driven by overallPercent */}
       <div
         className="tm-progress-fill"
         style={{ width: `${overallPercent}%`, transition: 'width 0.4s ease-in-out' }}
