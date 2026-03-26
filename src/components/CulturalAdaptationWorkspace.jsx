@@ -35,6 +35,7 @@ export default function CulturalAdaptationWorkspace({
   const [activeTab, setActiveTab] = useState("adaptation");
   const projectId = state?.projectId;
   const [projectRec, setProjectRec] = useState(null);
+  const [copied, setCopied] = useState(false);  //23_03_sanju
 
   const [isLoadingProject, setIsLoadingProject] = useState(!!projectId);
  
@@ -73,6 +74,7 @@ export default function CulturalAdaptationWorkspace({
 
   // 🆕 NEW: Official Loading State for the Sidebar
   // 🆕 NEW: Official Loading State for the Sidebar
+  //Hari-24/3
   const progressData = useMemo(() => {
     if (!projectRec) {
       // Return a temporary loading state while the database is fetching
@@ -205,6 +207,7 @@ console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.lengt
     return "";
   };
 
+  //23_03_sanju for mark as review button
   const getCIStatus = (seg, overrides) => {
      const o = overrides?.[seg.id] || {};
      const status = String(
@@ -212,7 +215,9 @@ console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.lengt
        o.status ?? o.ciStatus ?? seg.ciStatus ?? seg.status ?? ""
      ).toLowerCase();
      if (status === "reviewed") return "Reviewed";
-     //if (status === "completed") return "Reviewed"; // optional: treat Completed as Reviewed in the pill
+     if (status === "completed") return "Reviewed"; // optional: treat Completed as Reviewed in the pill
+     if (status === "flagged") return "Flagged for Review";   //sanju 23_03
+     if (status === "dismissed") return "Dismissed";  //sanju 23_03
      return "Pending";
 };
 
@@ -880,6 +885,7 @@ useEffect(() => {
 //     gotoPhase('P4');
 //   };
 /** Complete Phase 3 → next page */
+//Hari
   const handleCompletePhase = async() => {
     const mergedSegments = segments.map((s) => {
       const o = segOverrides[s.id] || {};
@@ -892,9 +898,10 @@ useEffect(() => {
     });
 
    // ✅ Persist P3 outputs AND seed P4 (Using await ensures it finishes saving)
+   //Hari
    await updateProjectMeta(projectId, { 
      segmentsP3: mergedSegments,
-     //segmentsP4: mergedSegments // 🆕 SEED PHASE 4
+     segmentsP4: mergedSegments // 🆕 SEED PHASE 4
    });
 
    // ✅ Mark P3 complete
@@ -909,7 +916,11 @@ useEffect(() => {
     //   },
     // });\
     gotoPhase('P4');
+    navigate("/regulatoryCompliance", {
+      state: { projectName, segments: mergedSegments, country },
+    });
   };
+
   /** Mark as Reviewed */
   const handleMarkReviewed = () => {
     if (!selectedResolved) return;
@@ -923,11 +934,71 @@ useEffect(() => {
     }));
   };
 
-  /** Helper: status pill */
+  /** Flag segment for review 23_03_sanju*/
+const handleFlagForReview = () => {
+  if (!selectedResolved) return;
+
+    setSegOverrides((prev) => ({
+    ...prev,
+    [selectedResolved.id]: {
+      ...prev[selectedResolved.id],
+      status: "Flagged",
+      ciStatus: "Flagged", // mirror for persistence/read-back
+    },
+  }));
+};
+
+/** Dismiss AI suggestion (explicit rejection) 23_03_sanju*/
+const handleDismissSuggestion = () => {
+  if (!selectedResolved) return;
+
+  setSegOverrides((prev) => ({
+    ...prev,
+    [selectedResolved.id]: {
+      ...prev[selectedResolved.id],
+      status: "Dismissed",
+      ciStatus: "Dismissed",
+      dismissedAt: new Date().toISOString(),
+      dismissedReason: "AI suggestion not applicable",
+    },
+  }));
+
+  // Optional: keep modal open or close
+  // setIsAnalysisOpen(false);
+};
+
+/* for alternative dismised suggestion 24_03_sanju*/
+/** Dismiss ALTERNATIVE suggestion (A/B) */
+const handleDismissAlternative = (altIndex = 0) => {
+  if (!selectedResolved) return;
+ 
+  setAnalysisBySegment(prev => {
+    const analysis = prev[selectedResolved.id];
+    if (!analysis || !Array.isArray(analysis.alternatives)) return prev;
+ 
+    const nextAlternatives = [...analysis.alternatives];
+    nextAlternatives[altIndex] = {
+      ...nextAlternatives[altIndex],
+      dismissed: true,
+    };
+ 
+    return {
+      ...prev,
+      [selectedResolved.id]: {
+        ...analysis,
+        alternatives: nextAlternatives,
+      },
+    };
+  });
+};
+ 
+    /** Helper: status pill */
   const statusPill = (status) => {
     const s = String(status || "").toLowerCase();
     if (s === "completed") return "completed";
     if (s === "reviewed") return "reviewed";
+    if (s === "flagged") return "flagged";   //sanju 23_03
+    if (s === "dismissed") return "dismissed";  //sanju 23_03
     if (s === "pending") return "pending";
     return "neutral";
   };
@@ -986,7 +1057,8 @@ useEffect(() => {
       sourceLang: "EN",
       translated: seg.translated,
       targetLang: seg.lang || targetLang,
-      meta: { therapyArea, words: seg.words, title: seg.title },
+      country,
+      meta: { therapyArea, words: seg.words, title: seg.title, country },
     };
   };
 
@@ -1104,8 +1176,7 @@ useEffect(() => {
     }
   };
 
-  
-
+  //23_03_sanju
   const handleReanalyze = async () => {
     if (!selectedResolved) return;
     setAnalysisBySegment((prev) => {
@@ -1115,7 +1186,7 @@ useEffect(() => {
     await handleAnalyzeClick();
   };
 
-  /** Accept suggestion (closes modal) */
+  /** Accept suggestion (closes modal) 13_03_sanju*/
   const handleAcceptSuggestion = (suggestionText) => {
     if (!selectedResolved) return;
 
@@ -1143,36 +1214,47 @@ useEffect(() => {
       },
     }));
 
-    setIsAnalysisOpen(false);
+   // setIsAnalysisOpen(false);
   };
 
-  /** Apply selected alternative (keeps modal open) */
-  const handleApplyAlternative = (text) => {
-    if (!selectedResolved) return;
-    const sanitized = String(text || "").trim();
-    if (!sanitized.length) return;
+  /** Apply selected alternative (keeps modal open) 13_03_sanju */
+ const handleApplyAlternative = (text) => {
+  if (!selectedResolved) return;
+  const sanitized = String(text || "").trim();
+  if (!sanitized.length) return;
 
-    setSegOverrides((prev) => ({
-      ...prev,
-      [selectedResolved.id]: {
-        ...prev[selectedResolved.id],
-        adapted: sanitized,
-        status: "Pending",
-      },
-    }));
-  };
+  setSegOverrides((prev) => ({
+    ...prev,
+    [selectedResolved.id]: {
+      ...prev[selectedResolved.id],
+      adapted: sanitized,
+      // Still Pending; becomes Reviewed only on the next action
+      status: "Pending",
+    },
+  }));
+};
 
-  const handleModalReviewedAndContinue = () => {
-    handleMarkReviewed();
-    setIsAnalysisOpen(false);
+ // Guard: enable only when adapted text exists 13_03_sanju
+ const handleModalReviewedAndContinue = () => {
+  
+  if (!hasAdaptedForSelected) return;
 
-    const currentIdx = segments.findIndex((s) => s.id === selectedResolved.id);
-    const next = segments[currentIdx + 1];
-    if (next) setSelectedId(next.id);
-  };
+  // This sets status/ciStatus=Reviewed in segOverrides
+  handleMarkReviewed();
+
+  // Close modal and move to next segment
+  setIsAnalysisOpen(false);
+
+  const currentIdx = segments.findIndex((s) => s.id === selectedResolved.id);
+  const next = segments[currentIdx + 1];
+  if (next) setSelectedId(next.id);
+};
 
   // Derived flags for the "Mark as Reviewed" button
 const adaptedTextForSelected = (segOverrides[selectedResolved?.id]?.adapted ?? selectedResolved?.adapted ?? "").trim();
+
+// NEW: boolean to reuse anywhere (main workspace and modal) 13_03_sanju
+const hasAdaptedForSelected = !!adaptedTextForSelected;
 
 const isReviewedForSelected = (() => {
   const s = String(
@@ -1185,7 +1267,7 @@ const isReviewedForSelected = (() => {
   return s === "reviewed";
 })();
 
-// Enabled only when adapted text exists and not already reviewed
+// Enabled only when adapted text exists and not already reviewed 13_03_sanju
 const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !isAnalyzing;
 
   /** Demo content (kept for look-and-feel in the panel) */
@@ -1591,138 +1673,249 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
   };
 
   /** ========= PDF GENERATION: AGENCY HANDOFF ========= */
-  const handleGeneratePDF = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
+  // const handleGeneratePDF = () => {
+  //   const doc = new jsPDF();
+  //   const pageWidth = doc.internal.pageSize.getWidth();
+  //   const margin = 20;
  
-    // Helper: Centered text
-    const addCenteredText = (text, y, size, isBold = false) => {
-      doc.setFontSize(size);
-      doc.setFont("helvetica", isBold ? "bold" : "normal");
-      const textWidth = doc.getTextWidth(text);
-      doc.text(text, (pageWidth - textWidth) / 2, y);
-    };
+  //   // Helper: Centered text
+  //   const addCenteredText = (text, y, size, isBold = false) => {
+  //     doc.setFontSize(size);
+  //     doc.setFont("helvetica", isBold ? "bold" : "normal");
+  //     const textWidth = doc.getTextWidth(text);
+  //     doc.text(text, (pageWidth - textWidth) / 2, y);
+  //   };
  
-    // Helper: Word-wrapped text
-    const addWrappedText = (text, y, size) => {
-      doc.setFontSize(size);
-      doc.setFont("helvetica", "normal");
-      const lines = doc.splitTextToSize(text || "—", pageWidth - margin * 2);
-      doc.text(lines, margin, y);
-      return y + (lines.length * (size * 0.45)); // return approximate new Y position
-    };
+  //   // Helper: Word-wrapped text
+  //   const addWrappedText = (text, y, size) => {
+  //     doc.setFontSize(size);
+  //     doc.setFont("helvetica", "normal");
+  //     const lines = doc.splitTextToSize(text || "—", pageWidth - margin * 2);
+  //     doc.text(lines, margin, y);
+  //     return y + (lines.length * (size * 0.45)); // return approximate new Y position
+  //   };
  
-    // --- PAGE 1: TITLE PAGE ---
-    addCenteredText("CULTURAL INTELLIGENCE", 70, 24, true);
-    addCenteredText("PLAYBOOK", 85, 24, true);
+  //   // --- PAGE 1: TITLE PAGE ---
+  //   addCenteredText("CULTURAL INTELLIGENCE", 70, 24, true);
+  //   addCenteredText("PLAYBOOK", 85, 24, true);
  
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    const safeLang = state?.lang || getTargetLang(therapyArea) || "DE";
-    doc.text(`Project: ${projectName}`, margin, 130);
-    doc.text(`Target Market: ${country || safeLang.toUpperCase()}`, margin, 140);
-    doc.text(`Target Language: ${safeLang.toLowerCase()}`, margin, 150);
-    doc.text(`Therapeutic Area: ${therapyArea || "N/A"}`, margin, 160);
-    const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    doc.text(`Generated: ${dateStr}`, margin, 170);
+  //   doc.setFontSize(12);
+  //   doc.setFont("helvetica", "normal");
+  //   const safeLang = state?.lang || getTargetLang(therapyArea) || "DE";
+  //   doc.text(`Project: ${projectName}`, margin, 130);
+  //   doc.text(`Target Market: ${country || safeLang.toUpperCase()}`, margin, 140);
+  //   doc.text(`Target Language: ${safeLang.toLowerCase()}`, margin, 150);
+  //   doc.text(`Therapeutic Area: ${therapyArea || "N/A"}`, margin, 160);
+  //   const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  //   doc.text(`Generated: ${dateStr}`, margin, 170);
  
-    // --- PAGE 2: EXECUTIVE SUMMARY ---
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("EXECUTIVE SUMMARY", margin, 30);
+  //   // --- PAGE 2: EXECUTIVE SUMMARY ---
+  //   doc.addPage();
+  //   doc.setFontSize(16);
+  //   doc.setFont("helvetica", "bold");
+  //   doc.text("EXECUTIVE SUMMARY", margin, 30);
  
-    // Calculate Metrics
-    let totalScore = 0;
-    let scoredItems = 0;
-    let adaptedCount = 0;
-    segments.forEach(s => {
-      const analysis = analysisBySegment[s.id];
-      if (analysis && typeof analysis.overallScore === 'number') {
-        totalScore += analysis.overallScore;
-        scoredItems++;
-      }
-      if (segOverrides[s.id]?.adapted) adaptedCount++;
-    });
-    const avgScore = scoredItems > 0 ? Math.round(totalScore / scoredItems) : 0;
+  //   // Calculate Metrics
+  //   let totalScore = 0;
+  //   let scoredItems = 0;
+  //   let adaptedCount = 0;
+  //   segments.forEach(s => {
+  //     const analysis = analysisBySegment[s.id];
+  //     if (analysis && typeof analysis.overallScore === 'number') {
+  //       totalScore += analysis.overallScore;
+  //       scoredItems++;
+  //     }
+  //     if (segOverrides[s.id]?.adapted) adaptedCount++;
+  //   });
+  //   const avgScore = scoredItems > 0 ? Math.round(totalScore / scoredItems) : 0;
  
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total Segments Analyzed: ${segments.length}`, margin, 50);
-    doc.text(`Segments Requiring Cultural Adaptation: ${adaptedCount}`, margin, 60);
-    doc.text(`High/Critical Priority Changes: 0`, margin, 70); 
-    doc.text(`Overall Cultural Appropriateness Score: ${avgScore}/100`, margin, 80);
+  //   doc.setFontSize(12);
+  //   doc.setFont("helvetica", "normal");
+  //   doc.text(`Total Segments Analyzed: ${segments.length}`, margin, 50);
+  //   doc.text(`Segments Requiring Cultural Adaptation: ${adaptedCount}`, margin, 60);
+  //   doc.text(`High/Critical Priority Changes: 0`, margin, 70); 
+  //   doc.text(`Overall Cultural Appropriateness Score: ${avgScore}/100`, margin, 80);
  
-    doc.setFont("helvetica", "bold");
-    doc.text("KEY RECOMMENDATIONS:", margin, 105);
-    const recText = "This playbook provides segment-by-segment cultural intelligence analysis for the target market. Each segment includes specific action recommendations (REVIEW, REPLACE, REMOVE, or APPROVE), cultural proverbs where applicable, tone analysis, and market-specific guidance.";
-    addWrappedText(recText, 115, 12);
+  //   doc.setFont("helvetica", "bold");
+  //   doc.text("KEY RECOMMENDATIONS:", margin, 105);
+  //   const recText = "This playbook provides segment-by-segment cultural intelligence analysis for the target market. Each segment includes specific action recommendations (REVIEW, REPLACE, REMOVE, or APPROVE), cultural proverbs where applicable, tone analysis, and market-specific guidance.";
+  //   addWrappedText(recText, 115, 12);
  
-    // --- PAGES 3+: SEGMENT LOOP ---
-    segments.forEach((seg, idx) => {
-      doc.addPage();
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text(`SEGMENT ${idx + 1}`, margin, 30);
+  //   // --- PAGES 3+: SEGMENT LOOP ---
+  //   segments.forEach((seg, idx) => {
+  //     doc.addPage();
+  //     doc.setFontSize(14);
+  //     doc.setFont("helvetica", "bold");
+  //     doc.text(`SEGMENT ${idx + 1}`, margin, 30);
  
-      doc.setFontSize(12);
-      doc.text("Original Translation:", margin, 45);
-      let currentY = addWrappedText(seg.translated || seg.source || "—", 55, 11);
+  //     doc.setFontSize(12);
+  //     doc.text("Original Translation:", margin, 45);
+  //     let currentY = addWrappedText(seg.translated || seg.source || "—", 55, 11);
  
-      // Include adapted text if the user approved changes
-      const adaptedText = segOverrides[seg.id]?.adapted;
-      if (adaptedText) {
-        doc.setFont("helvetica", "bold");
-        currentY += 10;
-        doc.text("Culturally Adapted Translation:", margin, currentY);
-        currentY += 10;
-        currentY = addWrappedText(adaptedText, currentY, 11);
-      }
+  //     // Include adapted text if the user approved changes
+  //     const adaptedText = segOverrides[seg.id]?.adapted;
+  //     if (adaptedText) {
+  //       doc.setFont("helvetica", "bold");
+  //       currentY += 10;
+  //       doc.text("Culturally Adapted Translation:", margin, currentY);
+  //       currentY += 10;
+  //       currentY = addWrappedText(adaptedText, currentY, 11);
+  //     }
  
-      const score = analysisBySegment[seg.id]?.overallScore || 0;
-      doc.setFont("helvetica", "bold");
-      currentY += 15;
-      doc.text(`Cultural Appropriateness Score: ${score}/100`, margin, currentY);
-    });
+  //     const score = analysisBySegment[seg.id]?.overallScore || 0;
+  //     doc.setFont("helvetica", "bold");
+  //     currentY += 15;
+  //     doc.text(`Cultural Appropriateness Score: ${score}/100`, margin, currentY);
+  //   });
  
-    // --- FINAL PAGE: IMPLEMENTATION CHECKLIST ---
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("IMPLEMENTATION CHECKLIST", margin, 30);
+  //   // --- FINAL PAGE: IMPLEMENTATION CHECKLIST ---
+  //   doc.addPage();
+  //   doc.setFontSize(16);
+  //   doc.setFont("helvetica", "bold");
+  //   doc.text("IMPLEMENTATION CHECKLIST", margin, 30);
  
-    const checklist = [
-      "Review all REPLACE recommendations with native speakers",
-      "Implement high/critical priority changes first",
-      "Validate tone appropriateness with local stakeholders",
-      "Apply cultural proverbs where suggested",
-      "Verify formality levels match target audience expectations",
-      "Submit culturally adapted content for regulatory review",
-      "Conduct final quality assurance with in-market experts",
-      "Document all changes for audit trail"
-    ];
+  //   const checklist = [
+  //     "Review all REPLACE recommendations with native speakers",
+  //     "Implement high/critical priority changes first",
+  //     "Validate tone appropriateness with local stakeholders",
+  //     "Apply cultural proverbs where suggested",
+  //     "Verify formality levels match target audience expectations",
+  //     "Submit culturally adapted content for regulatory review",
+  //     "Conduct final quality assurance with in-market experts",
+  //     "Document all changes for audit trail"
+  //   ];
  
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    let chkY = 50;
-    checklist.forEach(item => {
-      // Draw a literal checkbox square
-      doc.rect(margin, chkY - 4, 4, 4); 
-      doc.text(item, margin + 8, chkY);
-      chkY += 12;
-    });
+  //   doc.setFontSize(12);
+  //   doc.setFont("helvetica", "normal");
+  //   let chkY = 50;
+  //   checklist.forEach(item => {
+  //     // Draw a literal checkbox square
+  //     doc.rect(margin, chkY - 4, 4, 4); 
+  //     doc.text(item, margin + 8, chkY);
+  //     chkY += 12;
+  //   });
  
-    // Trigger Download
-    const isoDate = new Date().toISOString().split('T')[0];
-    doc.save(`Cultural-Intelligence-Playbook-${safeLang.toUpperCase()}-${isoDate}.pdf`);
-  };
+  //   // Trigger Download
+  //   const isoDate = new Date().toISOString().split('T')[0];
+  //   doc.save(`Cultural-Intelligence-Playbook-${safeLang.toUpperCase()}-${isoDate}.pdf`);
+  // };
 
+  const handleGeneratePDF = async () => {
+
+  try {
+
+    // --- 1. PREPARE THE DATA (Same logic as your jsPDF code) ---
+
+    let totalScore = 0;
+
+    let scoredItems = 0;
+
+    let adaptedCount = 0;
+ 
+    const processedSegments = segments.map((s) => {
+
+      const analysis = analysisBySegment[s.id];
+
+      const adaptedText = segOverrides[s.id]?.adapted;
+ 
+      if (analysis && typeof analysis.overallScore === 'number') {
+
+        totalScore += analysis.overallScore;
+
+        scoredItems++;
+
+      }
+
+      if (adaptedText) adaptedCount++;
+ 
+      return {
+
+        id: s.id,
+
+        original: s.translated || s.source || "—",
+
+        adapted: adaptedText || null,
+
+        score: analysis?.overallScore || 0
+
+      };
+
+    });
+ 
+    const avgScore = scoredItems > 0 ? Math.round(totalScore / scoredItems) : 0;
+
+    const safeLang = state?.lang || getTargetLang(therapyArea) || "DE";
+ 
+    // --- 2. SEND TO PYTHON ---
+
+    const response = await fetch('http://localhost:5000/generate-pdf', {
+
+      method: 'POST',
+
+      headers: { 'Content-Type': 'application/json' },
+
+      body: JSON.stringify({
+
+        projectName: projectNameProp || "Project",
+
+        targetMarket: country || safeLang.toUpperCase(),
+
+        targetLang: safeLang.toLowerCase(),
+
+        therapyArea: therapyArea || "N/A",
+
+        summary: {
+
+          totalSegments: segments.length,
+
+          adaptedCount: adaptedCount,
+
+          avgScore: avgScore
+
+        },
+
+        segments: processedSegments
+
+      }),
+
+    });
+ 
+    if (!response.ok) throw new Error("Backend error");
+ 
+    const blob = await response.blob();
+
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+
+    link.href = url;
+
+    const isoDate = new Date().toISOString().split('T')[0];
+
+    link.setAttribute('download', `Playbook-${safeLang.toUpperCase()}-${isoDate}.pdf`);
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+ 
+  } catch (error) {
+
+    console.error("PDF Error:", error);
+
+    alert("Could not generate PDF. Please ensure the Python server is running.");
+
+  }
+
+};
+ 
   return (
     <div className="cultural-page">
     {/* <div className={`cultural-page tm-app ${isFocusMode ? 'is-focus' : ''}`}> */}
     <div className={`tm-app ${isFocusMode ? 'is-focus' : ''}`}>
       {/* Sidebar */}
+      {/*Hari-24/3*/}
       <aside className="tm-sidebar" aria-label="Workflow Phases">
   {/* Global Progress Section */}
         <div className="tm-sidebar-progress" style={{ opacity: isProgressLoading ? 0.6 : 1, transition: 'opacity 0.3s' }}>
@@ -1732,7 +1925,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
             <span className="tm-progress-value">{isProgressLoading ? "..." : `${overallPercent}%`}</span>
           </div>
           {/* 🆕 Show Syncing... while loading */}
-          <div className="tm-progress-sub">{isProgressLoading ? "Syncing..." : `${completedCount} of ${totalTarget} phases completed`}</div>
+          <div className="tm-progress-sub">{isProgressLoading ? "Loading..." : `${completedCount} of ${totalTarget} phases completed`}</div>
          
           <div className="tm-progress-bar">
             <div
@@ -2297,15 +2490,22 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
       <div className="tm-draft-card-head">
         <h3 className="tm-card-title">Final Culturally-Adapted Translation</h3>
         <div className="tm-draft-actions">
-          <button className="tm-btn outline small">
+          {/* <button className="tm-btn outline small">
             <span className="icon-magic">✨</span> Regenerate
+          </button> */}
+
+         <button
+  className="tm-btn outline small"
+  onClick={() => {
+    navigator.clipboard.writeText(fullDraftText);
+    setCopied(true);  {/* //23_03_sanju  changed in button for pop up */}
+    setTimeout(() => setCopied(false), 1500);  {/* //23_03_sanju  changed in button for pop up */}
+  }}
+>
+           <span className="icon-copy">❐</span> Copy to Clipboard
           </button>
-          <button
-            className="tm-btn outline small"
-            onClick={() => navigator.clipboard.writeText(fullDraftText)}
-          >
-            <span className="icon-copy">❐</span> Copy to Clipboard
-          </button>
+          {/* //23_03_sanju  changed in button for pop up  */}
+          {copied && <span className="tm-copied-badge">Copied ✓</span>}
         </div>
       </div>
       <div className="tm-draft-text-area">
@@ -2336,13 +2536,19 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
       </span>
     </div>
               <div className="tm-report-actions">
+                {/* //23_03_sanju  changed in button for pop up  */}
                 <button
-                  className="tm-btn outline small"
-                  onClick={() => navigator.clipboard.writeText(fullReportText)}
-                  title="Copy the full report to clipboard"
-                >
-                  ❐ Copy Full Report
+  className="tm-btn outline small"
+  onClick={() => {
+    navigator.clipboard.writeText(fullReportText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }}
+  title="Copy Full report to clipboard"
+>
+                   ❐ Copy Full Report
                 </button>
+                 {copied && <span className="tm-copied-badge">Copied Full Report</span>} {/*23_03_sanju */}
                 <button className="tm-btn outline small" onClick={expandAll} title="Expand all">
                   ⤢ Expand All
                 </button>
@@ -2386,19 +2592,21 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
 
                       <div className="tm-report-card-tools">
                         <span className={`tm-mini-score ${scoreBadgeClass}`}>
-                          {r.score != null ? r.score : "—"}
+                          {/* {r.score != null ? r.score : "—"} 23_03_sanju */}
                         </span>
                         <span className="tm-lang-chip" title="Target language">
                           {r.lang || getTargetLang(therapyArea) || "—"}
                         </span>
-
-                        <button
+                        {/* 23_03_sanju removed copy button*/}
+                        {/* <button
                           className="tm-btn ghost small"
                           title="Copy adapted text"
-                          onClick={() => navigator.clipboard.writeText(r.adapted || "")}
+                          onClick={() => navigator.clipboard.writeText(r.adapted || "")
+                            
+                          }
                         >
                           Copy
-                        </button>
+                        </button> */}
                         <button
                           className="tm-btn ghost small"
                           onClick={() => toggleExpanded(r.id)}
@@ -2562,54 +2770,94 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
                             </div>
                           </div>
 
-                          {Array.isArray(sec.issues) &&
-                            sec.issues.map((issue, idx) => (
-                              <div key={idx} className="ai-issue-card">
-                                <div className="ai-issue-meta">
-                                  <span className="ai-issue-priority">
-                                    {issue.priority?.toUpperCase()} PRIORITY ISSUE
-                                  </span>
-                                </div>
-
-                                <div className="ai-issue-block">
-                                  <div className="ai-issue-label">Translation:</div>
-                                  <div className="ai-issue-content">
-                                    {issue.translation?.trim()?.length
-                                      ? issue.translation
-                                      : selectedResolved?.translated?.trim()?.length
-                                      ? selectedResolved.translated
-                                      : "— No translation provided —"}
-                                  </div>
-                                </div>
-
-                                <div className="ai-issue-block">
-                                  <div className="ai-issue-label">Problem:</div>
-                                  <div className="ai-issue-content">
-                                    {issue.problem || "—"}
-                                  </div>
-                                </div>
-
-                                <div className="ai-issue-block">
-                                  <div className="ai-issue-label">Suggestion</div>
-                                  <div className="ai-issue-content">
-                                    {issue.suggestion || "—"}
-                                  </div>
-                                </div>
-
-                                <div className="ai-issue-actions">
-                                  <button
-                                    className="tm-btn primary"
-                                    onClick={() => handleAcceptSuggestion(issue.suggestion)}
-                                  >
-                                    Accept Suggestion
-                                  </button>
-                                  <button className="tm-btn outline">
-                                    Flag for Review
-                                  </button>
-                                  <button className="tm-btn ghost">Dismiss</button>
-                                </div>
-                              </div>
-                            ))}
+                           {/* 24_03_sanju_dismissed updated for respective suggestion */}
+                         {Array.isArray(sec.issues) && (
+  <>
+    {/* ✅ 1. ACTIVE (NOT DISMISSED) SUGGESTIONS */}
+    {sec.issues
+      .filter(issue => !issue.dismissed)
+      .map((issue, idx) => (
+        <div key={idx} className="ai-issue-card">
+ 
+          <div className="ai-issue-meta">
+            <span className="ai-issue-priority">
+              {issue.priority?.toUpperCase()} PRIORITY ISSUE
+            </span>
+          </div>
+ 
+          <div className="ai-issue-block">
+            <div className="ai-issue-label">Translation:</div>
+            <div className="ai-issue-content">
+              {issue.translation?.trim()?.length
+                ? issue.translation
+                : selectedResolved?.translated?.trim()?.length
+                ? selectedResolved.translated
+                : "— No translation provided —"}
+            </div>
+          </div>
+ 
+          <div className="ai-issue-block">
+            <div className="ai-issue-label">Problem:</div>
+            <div className="ai-issue-content">
+              {issue.problem || "—"}
+            </div>
+          </div>
+ 
+          <div className="ai-issue-block">
+            <div className="ai-issue-label">Suggestion</div>
+            <div className="ai-issue-content">
+              {issue.suggestion || "—"}
+            </div>
+          </div>
+ 
+          <div className="ai-issue-actions">
+            <button
+              className="tm-btn primary"
+              onClick={() => handleAcceptSuggestion(issue.suggestion)}
+            >
+              Accept Suggestion
+            </button>
+ 
+            <button
+              className="tm-btn outline"
+              onClick={handleFlagForReview}
+            >
+              Flag for Review
+            </button>
+ 
+            <button
+              className="tm-btn ghost"
+              onClick={() => handleDismissSuggestion(idx)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      ))}
+ 
+    {/* ✅ 2. DISMISSED SUGGESTIONS (SHOWN BELOW) */}
+    {sec.issues.some(issue => issue.dismissed) && (
+      <div className="ai-dismissed-section">
+        <div className="ai-dismissed-title tm-light">
+          Dismissed Suggestions
+        </div>
+ 
+        {sec.issues
+          .filter(issue => issue.dismissed)
+          .map((issue, idx) => (
+            <div key={`dismissed-${idx}`} className="ai-issue-card dismissed">
+              <span className="tm-light small">
+                ✅ Marked as Dismissed
+              </span>
+              <div className="ai-issue-content tm-light">
+                {issue.suggestion}
+              </div>
+            </div>
+          ))}
+      </div>
+    )}
+  </>
+)}       
                         </div>
                       ))
                     ) : (
@@ -2619,12 +2867,14 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
 
                   {/* Terminology Validation */}
                   <TerminologyValidationPanel
-                    score={analysis.overallScore}
-                    altList={Array.isArray(analysis.alternatives) ? analysis.alternatives : []}
-                    onApplyAlt={(text) => handleApplyAlternative(text)}
-                    selectedMap={segChipSelections}
-                    onSelectChip={(termId, val) => setChipSelectionForSeg(termId, val)}
-                  />
+  score={analysis.overallScore}
+  altList={analysis.alternatives}
+  onApplyAlt={(text) => handleApplyAlternative(text)}
+  onFlag={handleFlagForReview}
+  onDismiss={handleDismissAlternative} // 24_03_sanju
+  selectedMap={segChipSelections}
+  onSelectChip={(termId, val) => setChipSelectionForSeg(termId, val)}
+/>
                 </>
               );
             })()}
@@ -2633,20 +2883,36 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
     </div>
   </div>
 
-  {/* FOOTER (fixed, not scrollable) */}
-  <div className="tm-modal-footer">
-    <div className="ai-footer-actions">
-      <button className="tm-btn outline" onClick={() => setIsAnalysisOpen(false)}>
-        Close
-      </button>
-      <button className="tm-btn primary" onClick={handleReanalyze}>
-        Re-analyze
-      </button>
-      <button className="tm-btn primary" onClick={handleModalReviewedAndContinue}>
-        Mark as Reviewed &amp; Continue
-      </button>
-    </div>
+  {/* FOOTER (fixed, not scrollable) 13_03_sanju */}
+ <div className="tm-modal-footer">
+  <div className="ai-footer-actions">
+    <button className="tm-btn outline" onClick={() => setIsAnalysisOpen(false)}>
+      Close
+    </button>
+{/* //23_03_sanju  RE-Analyze button*/}
+    <button
+  className={`tm-btn primary ${isAnalyzing ? "is-loading" : ""}`}
+  onClick={handleReanalyze}
+  disabled={isAnalyzing}
+>
+  {isAnalyzing ? "Re-analyzing…" : "Re-analyze"}
+</button>
+
+    <button
+      className="tm-btn primary"
+      onClick={handleModalReviewedAndContinue}
+      disabled={!hasAdaptedForSelected}
+      aria-disabled={!hasAdaptedForSelected}
+      title={
+        !hasAdaptedForSelected
+          ? "Accept/apply a cultural adaptation first"
+          : "Mark this segment as Reviewed and go to the next"
+      }
+    >
+      Mark as Reviewed &amp; Continue
+    </button>
   </div>
+</div>
 </Modal>
       </div>
     </div>
@@ -2762,6 +3028,8 @@ function TerminologyValidationPanel({
   selectedMap = {},
   onSelectChip,
   onApplyAlt,
+  onFlag,  //sanju 23_03
+  onDismiss  //sanju 23_03
 }) {
   const hasAB = Array.isArray(altList) && altList.length > 0;
 
@@ -2805,14 +3073,43 @@ function TerminologyValidationPanel({
       </div>
 
       <div className="ai-term-list">
-        {/* Render suggestionA/suggestionB as first two "terms" */}
-        {hasAB &&
-          altList.map((alt, idx) => (
-            <div key={`alt-${idx}`} className="ai-term-card">
+                {/* Render suggestionA/suggestionB as first two "terms" 24_03_sanju */}
+        {/* ✅ DISMISSED ALTERNATIVES SHOWN BELOW */}
+{hasAB && altList.some(alt => alt.dismissed) && (
+  <div className="ai-dismissed-section">
+    <div className="ai-dismissed-title tm-light">
+      Dismissed Alternatives
+    </div>
+ 
+    {altList
+      .filter(alt => alt.dismissed)
+      .map((alt, idx) => (
+        <div
+          key={`alt-dismissed-${idx}`}
+          className="ai-term-card dismissed"
+        >
+          <span className="tm-light small">
+            ✅ Marked as Dismissed
+          </span>
+          <div className="ai-term-issue tm-light">
+            {alt.label}: {alt.text}
+          </div>
+        </div>
+      ))}
+  </div>
+)}
+ 
+{/* ✅ ACTIVE (NOT DISMISSED) ALTERNATIVES * 24_03_sanju */}
+{hasAB &&
+  altList
+    .filter(alt => !alt.dismissed)
+    .map((alt, idx) => (
+      <div key={`alt-${idx}`} className="ai-term-card">
+ 
               <div className="ai-term-badge-row">
                 <span className="ai-needs-badge">⚠ NEEDS REVIEW</span>
               </div>
-
+ 
               {/* Treat label as "Term" display */}
               <div
                 className="ai-term-label"
@@ -2830,12 +3127,12 @@ function TerminologyValidationPanel({
                   Score: {alt.score ?? "—"}/100
                 </span>
               </div>
-
+ 
               {/* Show the suggestion text itself */}
               <div className="ai-term-issue" style={{ marginTop: 8 }}>
                 <strong>Suggestion:</strong>&nbsp;{alt.text || "—"}
               </div>
-
+ 
               {/* Actions: Apply this alternative */}
               <div className="ai-term-actions">
                 <button
@@ -2846,8 +3143,21 @@ function TerminologyValidationPanel({
                 >
                   Apply {alt.label}
                 </button>
-                <button className="tm-btn outline">Flag for Review</button>
-                <button className="tm-btn ghost">Dismiss</button>
+                {/* //23_03    sanju                             */}
+                                 <button
+  className="tm-btn outline"
+  onClick={onFlag}
+>
+  Flag for Review
+</button>
+ {/* 24_03_sanju */}
+ <button
+            className="tm-btn ghost"
+            onClick={() => onDismiss?.(idx)}
+          >
+ 
+  Dismiss
+</button>
               </div>
             </div>
           ))}

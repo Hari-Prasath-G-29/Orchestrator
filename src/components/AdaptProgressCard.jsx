@@ -15,6 +15,16 @@ export default function AdaptProgressCard({ record }) {
   const navigate = useNavigate();
   const { completedSet, doneCount, total, nextPhase } = computeProgress(record);
 
+  //Hari - 24/03
+// ✅ NEW: Dynamically build the title using the market code (e.g., "JP" or "CN")
+  const baseTitle = record.meta?.title || '(Untitled)';
+  const marketCode = Array.isArray(record.meta?.marketCodes) && record.meta.marketCodes.length > 0 
+    ? record.meta.marketCodes[0] 
+    : null;
+    
+  // Strip out any accidental old suffixes so we don't get double "- JP - JP Adaptation"
+  const cleanTitle = baseTitle.replace(/\s*-\s*[A-Z]{2}\s*Adaptation/i, '');
+  const displayTitle = marketCode ? `${cleanTitle} - ${marketCode} Adaptation` : cleanTitle;
   
 console.debug('AdaptProgressCard progress:', {
   projectId: record.id,
@@ -27,7 +37,8 @@ console.debug('AdaptProgressCard progress:', {
   const onResume = () => {
     if (!nextPhase) return; // all complete
     const route = nextPhase.route || '/';
-    navigate(route, { state: { projectId: record.id, projectName: record.meta?.title } });
+    //Hari - 24/03
+    navigate(route, { state: { projectId: record.id, projectName: displayTitle } });
   };
 
   const onDelete = () => {
@@ -38,7 +49,8 @@ console.debug('AdaptProgressCard progress:', {
     <article className="ap-card">
       <header className="ap-header">
         <div>
-          <h4 className="ap-title">{record.meta?.title || '(Untitled)'}</h4>
+          {/*Hari - 24/03*/}
+          <h4 className="ap-title">{displayTitle}</h4>
           <div className="ap-sub">
             <span className="chip small">Content</span>
             <span className="sep">·</span>
