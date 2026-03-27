@@ -125,6 +125,7 @@ export default function CulturalAdaptationWorkspace({
   /** Prefer project from previous page */
   const projectName = state?.projectName ?? projectNameProp;
   const country = state?.country ?? "unknown country";
+  console.log(country);
 
   const gotoPhase = usePhaseNavigation(projectId, projectName);
   console.log('Cultural: projectId', state?.projectId);
@@ -153,13 +154,13 @@ console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.lengt
   const N8N_CULTURAL_WEBHOOK_URL =
     ENV.REACT_APP_N8N_CULTURAL_WEBHOOK_URL ||
     ENV.VITE_N8N_CULTURAL_WEBHOOK_URL ||
-    "http://172.16.4.24:8033/webhook/cultural";
+    "http://172.16.4.237:8016/webhook/cultural";
 
   /** Batch webhook URL */
   const N8N_CULTURAL_BATCH_WEBHOOK_URL =
     ENV.REACT_APP_N8N_CULTURAL_BATCH_WEBHOOK_URL ||
     ENV.VITE_N8N_CULTURAL_BATCH_WEBHOOK_URL ||
-    "http://172.16.4.237:8031/webhook/culturalTranslateAll";
+    "http://172.16.4.237:8016/webhook/culturalTranslateAll";
 
   /** Token for n8n (optional) */
   const N8N_AUTH = ENV.REACT_APP_N8N_TOKEN || ENV.VITE_N8N_TOKEN || "";
@@ -949,22 +950,33 @@ const handleFlagForReview = () => {
 };
 
 /** Dismiss AI suggestion (explicit rejection) 23_03_sanju*/
-const handleDismissSuggestion = () => {
+/** Dismiss AI suggestion (explicit rejection) for suggestion level instead of segment 23_03_sanju*/
+const handleDismissSuggestion = (issueIndex = 0) => {
   if (!selectedResolved) return;
 
-  setSegOverrides((prev) => ({
-    ...prev,
-    [selectedResolved.id]: {
-      ...prev[selectedResolved.id],
-      status: "Dismissed",
-      ciStatus: "Dismissed",
-      dismissedAt: new Date().toISOString(),
-      dismissedReason: "AI suggestion not applicable",
-    },
-  }));
+  setAnalysisBySegment(prev => {
+    const analysis = prev[selectedResolved.id];
+    if (!analysis) return prev;
 
-  // Optional: keep modal open or close
-  // setIsAnalysisOpen(false);
+    const nextIssues = [...analysis.sections[0].issues];
+    nextIssues[issueIndex] = {
+      ...nextIssues[issueIndex],
+      dismissed: true,
+    };
+
+    return {
+      ...prev,
+      [selectedResolved.id]: {
+        ...analysis,
+        sections: [
+          {
+            ...analysis.sections[0],
+            issues: nextIssues,
+          },
+        ],
+      },
+    };
+  });
 };
 
 /* for alternative dismised suggestion 24_03_sanju*/
@@ -1673,7 +1685,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
   };
 
   /** ========= PDF GENERATION: AGENCY HANDOFF ========= */
-  // const handleGeneratePDF = () => {
+  // const neratePDF = () => {
   //   const doc = new jsPDF();
   //   const pageWidth = doc.internal.pageSize.getWidth();
   //   const margin = 20;
@@ -1682,7 +1694,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
   //   const addCenteredText = (text, y, size, isBold = false) => {
   //     doc.setFontSize(size);
   //     doc.setFont("helvetica", isBold ? "bold" : "normal");
-  //     const textWidth = doc.getTextWidth(text);
+  //     const textWidth =handleGe doc.getTextWidth(text);
   //     doc.text(text, (pageWidth - textWidth) / 2, y);
   //   };
  
@@ -1848,7 +1860,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
  
     // --- 2. SEND TO PYTHON ---
 
-    const response = await fetch('http://localhost:5000/generate-pdf', {
+    const response = await fetch('http://localhost:8000/generate-pdf', {
 
       method: 'POST',
 
@@ -1856,7 +1868,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
 
       body: JSON.stringify({
 
-        projectName: projectNameProp || "Project",
+        projectName: projectName || "Project",
 
         targetMarket: country || safeLang.toUpperCase(),
 
@@ -2549,16 +2561,16 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
                    ❐ Copy Full Report
                 </button>
                  {copied && <span className="tm-copied-badge">Copied Full Report</span>} {/*23_03_sanju */}
-                <button className="tm-btn outline small" onClick={expandAll} title="Expand all">
+                {/* <button className="tm-btn outline small" onClick={expandAll} title="Expand all">
                   ⤢ Expand All
-                </button>
-                <button
+                </button> */}
+                {/* <button
                   className="tm-btn outline small"
                   onClick={collapseAll}
                   title="Collapse all"
                 >
                   ⤡ Collapse All
-                </button>
+                </button> */}
               </div>
             </div>
 
@@ -2580,44 +2592,30 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
 
                 return (
                   <div key={r.id} className="tm-report-card">
-                    <div className="tm-report-card-head">
-                      <div className="tm-report-card-title-wrap">
-                        <div className="tm-report-card-title">Segment {r.index}</div>
-                        {/* {r.title && (
-                          <div className="tm-report-card-subtitle tm-light">
-                            {r.title}
-                          </div>
-                        )} */}
-                      </div>
+                     {/* //23_03_sanju dropdown same as smart tm */}
+                <div
+  className="tm-report-card-head tm-accordion-head"
+  onClick={() => toggleExpanded(r.id)}
+  role="button"
+  aria-expanded={expanded}
+>
+  <div className="tm-report-card-title-wrap">
+    
+    <span className="tm-report-card-title">Section {r.index}</span>
+  </div>
 
-                      <div className="tm-report-card-tools">
-                        <span className={`tm-mini-score ${scoreBadgeClass}`}>
-                          {/* {r.score != null ? r.score : "—"} 23_03_sanju */}
-                        </span>
-                        <span className="tm-lang-chip" title="Target language">
-                          {r.lang || getTargetLang(therapyArea) || "—"}
-                        </span>
-                        {/* 23_03_sanju removed copy button*/}
-                        {/* <button
-                          className="tm-btn ghost small"
-                          title="Copy adapted text"
-                          onClick={() => navigator.clipboard.writeText(r.adapted || "")
-                            
-                          }
-                        >
-                          Copy
-                        </button> */}
-                        <button
-                          className="tm-btn ghost small"
-                          onClick={() => toggleExpanded(r.id)}
-                          aria-expanded={expanded}
-                          aria-controls={`report-body-${r.id}`}
-                          title={expanded ? "Collapse" : "Expand"}
-                        >
-                          {expanded ? "Hide" : "Show"}
-                        </button>
-                      </div>
-                    </div>
+  <div className="tm-report-card-tools">
+    <span className="tm-chip soft">
+      {r.source.split(/\s+/).length} words
+    </span>
+
+    <span className={`tm-accordion-chevron ${expanded ? "open" : ""}`}>
+      ▾
+    </span>
+  </div>
+</div>
+
+
 
                     {expanded && (
                       <div className="tm-report-card-body" id={`report-body-${r.id}`}>
@@ -2886,9 +2884,9 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
   {/* FOOTER (fixed, not scrollable) 13_03_sanju */}
  <div className="tm-modal-footer">
   <div className="ai-footer-actions">
-    <button className="tm-btn outline" onClick={() => setIsAnalysisOpen(false)}>
+    {/* <button className="tm-btn outline" onClick={() => setIsAnalysisOpen(false)}>
       Close
-    </button>
+    </button> */}
 {/* //23_03_sanju  RE-Analyze button*/}
     <button
   className={`tm-btn primary ${isAnalyzing ? "is-loading" : ""}`}

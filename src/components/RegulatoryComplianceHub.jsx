@@ -178,7 +178,7 @@ export default function RegulatoryComplianceHub({
       import.meta.env &&
       import.meta.env.VITE_N8N_COMPLIANCE_URL) ||
     process.env.REACT_APP_N8N_COMPLIANCE_URL ||
-    "http://172.16.4.237:8033/webhook-test/regulatory";
+    "http://172.16.4.237:8016/webhook/regulatory";
 
   /* ================= LANGUAGE HELPERS ================= */
   const getTargetLang = (therapyAreaStr) => {
@@ -1460,7 +1460,7 @@ const overallComplianceScoreFromModal = analysisData?.score ?? null; // number |
               <div className="rcm-overall">
                 <div className="rcm-overall__left">
                   <div className="rcm-overall__label">Overall Compliance Score</div>
-                  <div className="rcm-overall__value">{analysisData.score}/100</div>
+                  <div className="rcm-overall__value">   {analysisData.score !== null ? `${analysisData.score}/100` : ""} </div>
                 </div>
                 <div className="rcm-overall__right">
                   <div className="rcm-overall__sub">Risk Level</div>
@@ -1647,7 +1647,7 @@ const overallComplianceScoreFromModal = analysisData?.score ?? null; // number |
             <div className="rcm-modal__footer">
               <button
                 className={`btn outline ${isReAnalyzing ? "is-loading" : ""}`}
-                onClick={reAnalyzeInModal}
+                onClick={openAnalysisModal}   //27_03_sanju
                 disabled={isReAnalyzing || isReAnalyzeDisabled}
               >
                 {isReAnalyzing ? "Re-analyzing…" : "Re-Analyze with AI"}
