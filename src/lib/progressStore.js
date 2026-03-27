@@ -193,7 +193,8 @@
 
 // src/lib/progressStore.js
 
-const API_URL = "http://localhost:8000"; // Ensure this matches your Python port
+// const API_URL = "http://localhost:8000"; // Ensure this matches your Python port
+const API_URL = "https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/";
 
 export const PHASES = [
   { id: 'P1', label: 'P1', display: 'Global Context Capture', route: '/globalAssetCapture' },

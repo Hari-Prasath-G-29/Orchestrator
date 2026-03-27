@@ -343,7 +343,7 @@ const toggleAdditionalAudience = (aud) => {
       // ADDED: timestamp cache-buster and cache: 'no-store' to force a fresh DB check every time
       const timestamp = new Date().getTime();
       const dbResponse = await fetch(
-        `http://127.0.0.1:8000/api/segmented-content?t=${timestamp}`, 
+        `https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/segmented-content?t=${timestamp}`, 
         { cache: 'no-store' } 
       );
       if (!dbResponse.ok)
@@ -400,7 +400,7 @@ const toggleAdditionalAudience = (aud) => {
         // PROPER ERROR CHECKING: We will now see exact database errors if they happen
         const savePromises = segmentsToStore.map(async (seg) => {
           const saveRes = await fetch(
-            "http://127.0.0.1:8000/api/segmented-content",
+            "https://://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/segmented-content",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

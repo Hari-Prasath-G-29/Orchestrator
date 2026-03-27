@@ -691,6 +691,7 @@ export default function SmartTMTranslationHub({
   // // ✅ 1. Use async State for the project record
   // const [projectRec, setProjectRec] = useState(null);
   const inboundLang = projectRec?.meta?.targetLang || state?.lang || state?.sourceLang || "EN";
+  const country = state?.country ?? "Unknown Country";
   // const refreshProgress = async () => {
   //   if (projectId) {
   //     const p = await getProject(projectId);
@@ -1162,7 +1163,7 @@ useEffect(() => {
   const handlePhaseClick = (phaseName) => {
     if (phaseName === "Global Context Capture") {
       navigate("/globalAssetCapture", {
-        state: { projectName, segments, lang: inboundLang },
+        state: { projectName, segments, lang: inboundLang, country },
       });
     }
   };
@@ -1227,6 +1228,7 @@ useEffect(() => {
         segments: mergedSegments, // ✅ entire segments list, with translated content included
         // 🆕 propagate lang
         lang: inboundLang,
+        country
       },
     });
   };
@@ -1745,6 +1747,7 @@ const handleGenerateDraftTranslation = () => {
           segments: normalizedDraftSegments,
           lang: inboundLang,
           therapyArea,
+          country,
           fromDraft: true, // optional: for any additional UX control on CI
         },
       });
@@ -2350,7 +2353,8 @@ return (
               projectName: projectName,
               targetLang: inboundLang || "EN",
               sourceLang: "English",
-              allSegments: mergeSegmentsWithOverrides(segments, segOverrides)
+              allSegments: mergeSegmentsWithOverrides(segments, segOverrides),
+              country
             }
           });
         }}

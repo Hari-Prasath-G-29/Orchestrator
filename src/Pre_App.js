@@ -90,6 +90,16 @@ useEffect(() => {
   };
 }, [userMenuOpen]);
 
+const handleLogout = () => {
+    localStorage.removeItem("token");
+    sessionStorage.clear(); 
+
+    const tenantId = process.env.REACT_APP_AZURE_TENANT_ID;
+    const postLogoutRedirectUri = encodeURIComponent(window.location.origin); 
+    const logoutUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/logout?post_logout_redirect_uri=${postLogoutRedirectUri}`;
+
+    window.location.href = logoutUrl;
+  };
 
   return (
     <div className="page-hero">
@@ -128,7 +138,7 @@ useEffect(() => {
                 <button className="co-dropdown-item" role="menuitem" type="button">
                   <PersonIcon /> Profile
                 </button>
-                <button className="co-dropdown-item text-danger" role="menuitem" type="button">
+                <button className="co-dropdown-item text-danger" role="menuitem" type="button"  onClick={() => handleLogout()}>
                   <LogoutIcon /> Logout
                 </button>
               </div>
