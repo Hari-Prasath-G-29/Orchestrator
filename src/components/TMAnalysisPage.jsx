@@ -11,18 +11,72 @@ const TMAnalysis = () => {
   const { segment, reviewData, allSegments = [] } = state || {};
   
   // 1. Calculate GLOBAL Project-Wide Score and Words
+  // const { 
+  //   globalLeveragePct, 
+  //   exactWords, 
+  //   fuzzyWords, 
+  //   newWords, 
+  //   totalProjectWords 
+  // } = useMemo(() => {
+  //   // Fallback to single segment if allSegments is missing for any reason
+  //   const segmentsToProcess = allSegments.length > 0 ? allSegments : [segment].filter(Boolean);
+
+  //   let exactSegCount = 0;
+  //   let fuzzySegCount = 0;
+
+  //   let exactW = 0;
+  //   let fuzzyW = 0;
+  //   let newW = 0;
+  //   let totalW = 0;
+
+  //   segmentsToProcess.forEach(seg => {
+  //     let rawScore = 0;
+  //     if (typeof seg.matchScore === 'number') {
+  //       rawScore = seg.matchScore;
+  //     } else if (seg.reviewData && typeof seg.reviewData.tmScore === 'number') {
+  //       rawScore = seg.reviewData.tmScore <= 1 ? seg.reviewData.tmScore * 100 : seg.reviewData.tmScore;
+  //     } else if (seg.translated && seg.translated.trim() !== "" && seg.translated !== "— Awaiting translation —") {
+  //       rawScore = 100;
+  //     }
+
+  //     const score = Math.round(rawScore);
+  //     const w = seg.words || 0;
+  //     totalW += w;
+
+  //     // Allocate words based on score exactly like the Overview tab
+  //     if (score >= 95) {
+  //       exactSegCount++;
+  //       exactW += w;
+  //     } else if (score >= 70) {
+  //       fuzzySegCount++;
+  //       fuzzyW += w;
+  //     } else {
+  //       newW += w;
+  //     }
+  //   });
+
+  //   const totalSegs = segmentsToProcess.length;
+  //   const leveragePct = totalSegs > 0 ? Math.round(((exactSegCount + fuzzySegCount) / totalSegs) * 100) : 0;
+
+  //   return {
+  //     globalLeveragePct: leveragePct,
+  //     exactWords: exactW,
+  //     fuzzyWords: fuzzyW,
+  //     newWords: newW,
+  //     totalProjectWords: totalW
+  //   };
+  // }, [allSegments, segment]);
+
+  // ✅ 1. Calculate SEGMENT-SPECIFIC Score and Words
   const { 
-    globalLeveragePct, 
+    segmentLeveragePct, 
     exactWords, 
     fuzzyWords, 
     newWords, 
-    totalProjectWords 
+    segmentWords 
   } = useMemo(() => {
-    // Fallback to single segment if allSegments is missing for any reason
-    const segmentsToProcess = allSegments.length > 0 ? allSegments : [segment].filter(Boolean);
-
-    let exactSegCount = 0;
-    let fuzzySegCount = 0;
+    // 🎯 We only want to process the ONE segment passed to this page
+    const segmentsToProcess = [segment].filter(Boolean);
 
     let exactW = 0;
     let fuzzyW = 0;
@@ -35,37 +89,46 @@ const TMAnalysis = () => {
         rawScore = seg.matchScore;
       } else if (seg.reviewData && typeof seg.reviewData.tmScore === 'number') {
         rawScore = seg.reviewData.tmScore <= 1 ? seg.reviewData.tmScore * 100 : seg.reviewData.tmScore;
-      } else if (seg.translated && seg.translated.trim() !== "" && seg.translated !== "— Awaiting translation —") {
+      } else if (seg.translated && seg.translated.trim() !== "" && seg.translated.trim() !== "— Awaiting translation —") {
         rawScore = 100;
       }
 
       const score = Math.round(rawScore);
-      const w = seg.words || 0;
+      const w = seg.words || (seg.source ? seg.source.split(/\s+/).filter(Boolean).length : 0);
       totalW += w;
 
-      // Allocate words based on score exactly like the Overview tab
+      // 🎯 Exact identical logic to your TMLeverageOverview!
       if (score >= 95) {
-        exactSegCount++;
         exactW += w;
       } else if (score >= 70) {
-        fuzzySegCount++;
         fuzzyW += w;
       } else {
         newW += w;
       }
     });
 
-    const totalSegs = segmentsToProcess.length;
-    const leveragePct = totalSegs > 0 ? Math.round(((exactSegCount + fuzzySegCount) / totalSegs) * 100) : 0;
+    const totalScore = segmentsToProcess.reduce((acc, seg) => {
+      let rawScore = 0;
+      if (typeof seg.matchScore === 'number') {
+        rawScore = seg.matchScore;
+      } else if (seg.reviewData && typeof seg.reviewData.tmScore === 'number') {
+        rawScore = seg.reviewData.tmScore <= 1 ? seg.reviewData.tmScore * 100 : seg.reviewData.tmScore;
+      } else if (seg.translated && seg.translated.trim() !== "" && seg.translated.trim() !== "— Awaiting translation —") {
+        rawScore = 100;
+      }
+      return acc + Math.round(rawScore);
+    }, 0);
+
+    const segmentLeveragePct = segmentsToProcess.length > 0 ? Math.round(totalScore / segmentsToProcess.length) : 0;
 
     return {
-      globalLeveragePct: leveragePct,
+      segmentLeveragePct,
       exactWords: exactW,
       fuzzyWords: fuzzyW,
       newWords: newW,
-      totalProjectWords: totalW
+      segmentWords: totalW
     };
-  }, [allSegments, segment]);
+  }, [segment]); // ✅ Now it only recalculates if the segment changes!
 
   // 2. Glossary Count (Kept specific to the current segment)
   const glossaryCount = reviewData?.glossaryUsed 
@@ -207,21 +270,22 @@ const TMAnalysis = () => {
                 <span className="tm-stat-label">TM LEVERAGE</span>
               </div> */} 
               {/* Section 1: Translation Summary */}
+            {/* Section 1: Translation Summary */}
           <div className="tm-summary-section">
             <div className="tm-summary-card-header">
               <span className="tm-summary-icon-small">📈</span>
               <div className="tm-summary-text">
-                <h3>Project Translation Summary</h3>
-                {/* Updated to show Project Total words */}
-                <p>Analyzing Segment {segment?.index || 1} • Project Total: {totalProjectWords} words</p>
+                {/* ✅ FIXED: Changed text to reflect it's for THIS segment */}
+                <h3>Segment Translation Summary</h3>
+                <p>Analyzing Segment {segment?.index || 1} • Segment Total: {segmentWords} words</p>
               </div>
             </div>
 
             <div className="tm-stats-grid">
               {/* 1. TM LEVERAGE */}
               <div className="tm-stat-card tm-leverage-card">
-                {/* Updated to use globalLeveragePct */}
-                <span className="tm-stat-value">{globalLeveragePct}%</span>
+                {/* ✅ FIXED: Replaced globalLeveragePct with segmentLeveragePct */}
+                <span className="tm-stat-value">{segmentLeveragePct}%</span>
                 <span className="tm-stat-label">TM LEVERAGE</span>
               </div>
 
@@ -241,7 +305,7 @@ const TMAnalysis = () => {
                 </span>
               </div>
 
-              {/* 4. NEW: GLOSSARY TERMS CARD */}
+              {/* 4. GLOSSARY TERMS CARD */}
               <div className="tm-stat-card">
                 <span className="tm-stat-label-top">Glossary Terms</span>
                 <span className={glossaryCount > 0 ? "tm-stat-value-blue" : "tm-stat-value-zero"}>

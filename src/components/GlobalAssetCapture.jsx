@@ -23,7 +23,7 @@ const projectId = state?.projectId || 'proj-unknown';
 
 const refreshProgress = async () => {
     const record = await getProject(projectId);
-    setProjectRec(record);
+    setProjectRec(record||{});
   };
   useEffect(() => {
     refreshProgress();
@@ -59,22 +59,102 @@ const refreshProgress = async () => {
 
   // 🆕 NEW: Official Loading State for the Sidebar
   //Hari-24/3
+  // const progressData = useMemo(() => {
+  //   if (!projectRec) {
+  //     return { completedSet: new Set(), completedCount: 0, overallPercent: 0, isProgressLoading: true };
+  //   }
+  //   const { completedSet } = computeProgress(projectRec);
+  //   const count = Math.min(completedSet.size, totalTarget);
+  //   return {
+  //     completedSet,
+  //     completedCount: count,
+  //     overallPercent: Math.round((count / totalTarget) * 100),
+  //     isProgressLoading: false
+  //   };
+  // }, [projectRec]);
+
+  // //Hari-25/3-------------
+  // const progressData = useMemo(() => {
+  //   let recToUse = projectRec;
+ 
+  //   // Synchronous fallback: If React state hasn't loaded, grab the latest from localStorage
+  //   if (!recToUse && projectId) {
+  //     try {
+  //       const rawDb = localStorage.getItem('glocal_progress_v1');
+  //       const db = JSON.parse(rawDb || '{}');
+  //       recToUse = db[projectId];
+  //     } catch (e) {
+  //       console.error("Error reading progress from localStorage:", e);
+  //     }
+  //   }
+ 
+  //   // If still no record exists, return the safe loading state
+  //   if (!recToUse) {
+  //     return { completedSet: new Set(), completedCount: 0, overallPercent: 0, isProgressLoading: true };
+  //   }
+ 
+  //   // Calculate progress based on the guaranteed latest data
+  //   const { completedSet } = computeProgress(recToUse);
+  //   const count = Math.min(completedSet.size, totalTarget);
+   
+  //   return {
+  //     completedSet,
+  //     completedCount: count,
+  //     overallPercent: Math.round((count / totalTarget) * 100),
+  //     isProgressLoading: !projectRec
+  //   };
+  // }, [projectRec, projectId]); // Make sure projectId is in the dependency array
+
+  //Hari-25/3 (Upgraded Universal Cache)
   const progressData = useMemo(() => {
-    if (!projectRec) {
-      return { completedSet: new Set(), completedCount: 0, overallPercent: 0, isProgressLoading: true };
+    let recToUse = projectRec;
+    
+    // ✅ FIXED: Safely check if the database record is an empty object
+    const isRecEmpty = !recToUse || Object.keys(recToUse).length === 0;
+
+    // Synchronous fallback: If React state hasn't loaded or is empty, grab from cache
+    if (isRecEmpty && projectId) {
+      try {
+        const rawDb = localStorage.getItem('glocal_progress_v1');
+        const db = JSON.parse(rawDb || '{}');
+        if (db[projectId]) {
+            recToUse = db[projectId];
+        }
+      } catch (e) {
+        console.error("Error reading progress from localStorage:", e);
+      }
     }
-    const { completedSet } = computeProgress(projectRec);
+
+    // If still no record exists anywhere (both DB and Cache are empty)
+    if (!recToUse || Object.keys(recToUse).length === 0) {
+      return { 
+        completedSet: new Set(), 
+        completedCount: 0, 
+        overallPercent: 0, 
+        isProgressLoading: isRecEmpty 
+      };
+    }
+
+    // Calculate progress based on the guaranteed latest data
+    const { completedSet } = computeProgress(recToUse);
     const count = Math.min(completedSet.size, totalTarget);
+
     return {
       completedSet,
       completedCount: count,
       overallPercent: Math.round((count / totalTarget) * 100),
-      isProgressLoading: false
+      
+      // Look at the REAL database state for the loading text!
+      isProgressLoading: !projectRec || Object.keys(projectRec).length === 0
     };
-  }, [projectRec]);
-
+  }, [projectRec, projectId]);
+ 
   const { completedSet, completedCount, overallPercent, isProgressLoading } = progressData;
-  // const { completedSet, completedCount, overallPercent } = progressData;
+  
+ 
+
+  //const { completedSet, completedCount, overallPercent, isProgressLoading } = progressData;
+  
 
  // From previous page (if passed)
  const projectName =
@@ -125,22 +205,218 @@ React.useEffect(() => {
 
 
 // Progress and State Maintenance - DATABASE FIRST
+  // React.useEffect(() => {
+  //   async function loadProjectData() {
+  //     if (!projectId) return;
+
+  //     const rec = await getProject(projectId);
+  //     const m = rec?.meta || {};
+  //     const hasFreshImport = state?.content && state.content !== "No content to display";
+
+  //     // 1. DATABASE FIRST: If we have saved text, ALWAYS use it (prevents back-arrow data loss)
+  //     if (typeof m.contentText === "string" && m.contentText.trim().length > 0) {
+  //       setContentText(m.contentText);
+  //     } 
+  //     // 2. FRESH IMPORT: Only use router state if the database is empty
+  //     else if (hasFreshImport) {
+  //       setContentText(state.content);
+  //       await updateProjectMeta(projectId, { contentText: state.content });
+  //     }
+
+  //     // RESTORE SEGMENTATION PREVIEW
+  //     if (Array.isArray(m.segmentsP1) && m.segmentsP1.length > 0) {
+  //       const reconstructedJson = {
+  //         output: m.segmentsP1.reduce((acc, seg) => {
+  //           acc[seg.id || `segment ${seg.index}`] = seg.source;
+  //           return acc;
+  //         }, {}),
+  //       };
+  //       setApiRawJson(reconstructedJson);
+  //     }
+
+  //     if (typeof m.assetType === "string") setAssetType(m.assetType);
+  //     if (typeof m.therapeuticContext === "string") setTherapeuticContext(m.therapeuticContext);
+  //     if (typeof m.indication === "string") setIndication(m.indication);
+  //     if (typeof m.targetAudience === "string") setTargetAudience(m.targetAudience);
+  //     if (Array.isArray(m.additionalAudiences)) setAdditionalAudiences(m.additionalAudiences);
+  //   }
+  //   loadProjectData();
+  // }, [projectId, state?.content]);
+
+  // // AUTO-SAVE CONTENT EDITS
+  // React.useEffect(() => {
+  //   if (!projectId || contentText === "No content to display") return;
+  //   const timeoutId = setTimeout(() => {
+  //     updateProjectMeta(projectId, { contentText });
+  //   }, 1000); // 1-second debounce
+  //   return () => clearTimeout(timeoutId);
+  // }, [projectId, contentText]);
+
+  // Progress and State Maintenance - DATABASE FIRST
+  // React.useEffect(() => {
+  //   async function loadProjectData() {
+  //     if (!projectId) return;
+
+  //     const rec = await getProject(projectId);
+  //     const m = rec?.meta || {};
+  //     const hasFreshImport = state?.content && state.content !== "No content to display";
+      
+  //     // ✅ 1. Check if we have real, valid text (Ignore the "Loading..." trap!)
+  //     const hasValidDbText = typeof m.contentText === "string" && m.contentText.trim().length > 0 && m.contentText !== "Loading...";
+
+  //     // 1. DATABASE FIRST: If we have valid saved text, ALWAYS use it
+  //     if (hasValidDbText) {
+  //       setContentText(m.contentText);
+  //     } 
+  //     // 2. FRESH IMPORT: Only use router state if the database is empty
+  //     else if (hasFreshImport) {
+  //       setContentText(state.content);
+  //       await updateProjectMeta(projectId, { contentText: state.content });
+  //     }
+  //     // ✅ 3. ULTIMATE FALLBACK: Reconstruct text from saved segments if contentText was lost!
+  //     else if (Array.isArray(m.segmentsP1) && m.segmentsP1.length > 0) {
+  //       const reconstructedText = m.segmentsP1.map(seg => seg.source).join("\n\n");
+  //       setContentText(reconstructedText);
+  //       await updateProjectMeta(projectId, { contentText: reconstructedText });
+  //     } else {
+  //       setContentText("No content found for this project.");
+  //     }
+
+  //     // RESTORE SEGMENTATION PREVIEW
+  //     if (Array.isArray(m.segmentsP1) && m.segmentsP1.length > 0) {
+  //       const reconstructedJson = {
+  //         output: m.segmentsP1.reduce((acc, seg) => {
+  //           acc[seg.id || `segment ${seg.index}`] = seg.source;
+  //           return acc;
+  //         }, {}),
+  //       };
+  //       setApiRawJson(reconstructedJson);
+  //     }
+
+  //     if (typeof m.assetType === "string") setAssetType(m.assetType);
+  //     if (typeof m.therapeuticContext === "string") setTherapeuticContext(m.therapeuticContext);
+  //     if (typeof m.indication === "string") setIndication(m.indication);
+  //     if (typeof m.targetAudience === "string") setTargetAudience(m.targetAudience);
+  //     if (Array.isArray(m.additionalAudiences)) setAdditionalAudiences(m.additionalAudiences);
+  //   }
+  //   loadProjectData();
+  // }, [projectId, state?.content]);
+
+  // Progress and State Maintenance - DATABASE FIRST
+  // React.useEffect(() => {
+  //   async function loadProjectData() {
+  //     if (!projectId) return;
+
+  //     const rec = await getProject(projectId);
+  //     const m = rec?.meta || {};
+      
+  //     // Safely clean strings to prevent hidden spaces from breaking our logic
+  //     const importedStr = (state?.content || "").trim();
+  //     const dbStr = (m.contentText || "").trim();
+      
+  //     const hasFreshImport = importedStr.length > 0 && !importedStr.includes("Loading...") && importedStr !== "No content to display";
+      
+  //     // ✅ FIXED: Use .includes() to catch "Loading..." even if it has spaces or newlines attached!
+  //     const hasValidDbText = dbStr.length > 0 && !dbStr.includes("Loading...") && dbStr !== "No content to display";
+
+  //     // 1. DATABASE FIRST: If we have valid saved text, ALWAYS use it
+  //     if (hasValidDbText) {
+  //       setContentText(m.contentText); // Keep original formatting for display
+  //     } 
+  //     // 2. FRESH IMPORT: Only use router state if the database is empty
+  //     else if (hasFreshImport) {
+  //       setContentText(state.content);
+  //       await updateProjectMeta(projectId, { contentText: state.content });
+  //     }
+  //     // 3. ULTIMATE FALLBACK: Reconstruct text from saved segments if contentText was lost/corrupted!
+  //     else if (Array.isArray(m.segmentsP1) && m.segmentsP1.length > 0) {
+  //       const reconstructedText = m.segmentsP1.map(seg => seg.source).join("\n\n");
+  //       setContentText(reconstructedText);
+  //       await updateProjectMeta(projectId, { contentText: reconstructedText });
+  //     } else {
+  //       setContentText("No content found for this project.");
+  //     }
+
+  //     // RESTORE SEGMENTATION PREVIEW
+  //     if (Array.isArray(m.segmentsP1) && m.segmentsP1.length > 0) {
+  //       const reconstructedJson = {
+  //         output: m.segmentsP1.reduce((acc, seg) => {
+  //           acc[seg.id || `segment ${seg.index}`] = seg.source;
+  //           return acc;
+  //         }, {}),
+  //       };
+  //       setApiRawJson(reconstructedJson);
+  //     }
+
+  //     // Restore dropdowns
+  //     if (typeof m.assetType === "string") setAssetType(m.assetType);
+  //     if (typeof m.therapeuticContext === "string") setTherapeuticContext(m.therapeuticContext);
+  //     if (typeof m.indication === "string") setIndication(m.indication);
+  //     if (typeof m.targetAudience === "string") setTargetAudience(m.targetAudience);
+  //     if (Array.isArray(m.additionalAudiences)) setAdditionalAudiences(m.additionalAudiences);
+  //   }
+  //   loadProjectData();
+  // }, [projectId, state?.content]);
+
+  // AUTO-SAVE CONTENT EDITS
+  // React.useEffect(() => {
+  //   if (!projectId) return;
+    
+  //   // ✅ FIXED: Prevent Auto-Save from saving "Loading..." (even with spaces) into the DB
+  //   const textToSave = (contentText || "").trim();
+  //   if (textToSave === "" || textToSave === "No content to display" || textToSave.includes("Loading...")) {
+  //     return;
+  //   }
+    
+  //   const timeoutId = setTimeout(() => {
+  //     updateProjectMeta(projectId, { contentText });
+  //   }, 1000); // 1-second debounce
+    
+  //   return () => clearTimeout(timeoutId);
+  // }, [projectId, contentText]);
+
+  // Progress and State Maintenance - DATABASE FIRST
   React.useEffect(() => {
     async function loadProjectData() {
       if (!projectId) return;
 
       const rec = await getProject(projectId);
       const m = rec?.meta || {};
-      const hasFreshImport = state?.content && state.content !== "No content to display";
+      
+      const importedStrOriginal = (state?.content || "").trim();
+      const dbStrOriginal = (m.contentText || "").trim();
+      
+      // ✅ FIXED: Convert to lowercase to catch ANY casing variations (Content vs content)
+      const importedStrLower = importedStrOriginal.toLowerCase();
+      const dbStrLower = dbStrOriginal.toLowerCase();
+      
+      // ✅ FIXED: A universal helper to catch all placeholder traps
+      const isInvalidText = (str) => {
+        return str === "" || 
+               str.includes("loading") || 
+               str.includes("no content to display") || 
+               str.includes("no content found");
+      };
 
-      // 1. DATABASE FIRST: If we have saved text, ALWAYS use it (prevents back-arrow data loss)
-      if (typeof m.contentText === "string" && m.contentText.trim().length > 0) {
-        setContentText(m.contentText);
+      const hasValidDbText = !isInvalidText(dbStrLower);
+      const hasFreshImport = !isInvalidText(importedStrLower);
+
+      // 1. DATABASE FIRST: If we have valid saved text, ALWAYS use it
+      if (hasValidDbText) {
+        setContentText(m.contentText); // Keep original formatting for display
       } 
       // 2. FRESH IMPORT: Only use router state if the database is empty
       else if (hasFreshImport) {
         setContentText(state.content);
         await updateProjectMeta(projectId, { contentText: state.content });
+      }
+      // 3. ULTIMATE FALLBACK: Reconstruct text from saved segments if contentText was lost/corrupted!
+      else if (Array.isArray(m.segmentsP1) && m.segmentsP1.length > 0) {
+        const reconstructedText = m.segmentsP1.map(seg => seg.source).join("\n\n");
+        setContentText(reconstructedText);
+        await updateProjectMeta(projectId, { contentText: reconstructedText });
+      } else {
+        setContentText("No content found for this project.");
       }
 
       // RESTORE SEGMENTATION PREVIEW
@@ -154,6 +430,7 @@ React.useEffect(() => {
         setApiRawJson(reconstructedJson);
       }
 
+      // Restore dropdowns
       if (typeof m.assetType === "string") setAssetType(m.assetType);
       if (typeof m.therapeuticContext === "string") setTherapeuticContext(m.therapeuticContext);
       if (typeof m.indication === "string") setIndication(m.indication);
@@ -165,28 +442,57 @@ React.useEffect(() => {
 
   // AUTO-SAVE CONTENT EDITS
   React.useEffect(() => {
-    if (!projectId || contentText === "No content to display") return;
+    if (!projectId) return;
+    
+    // ✅ FIXED: Check the lowercase version so it never saves bad data again
+    const textToSave = (contentText || "").trim().toLowerCase();
+    
+    if (
+      textToSave === "" || 
+      textToSave.includes("loading") || 
+      textToSave.includes("no content to display") || 
+      textToSave.includes("no content found")
+    ) {
+      return; // Abort auto-save!
+    }
+    
     const timeoutId = setTimeout(() => {
       updateProjectMeta(projectId, { contentText });
     }, 1000); // 1-second debounce
+    
     return () => clearTimeout(timeoutId);
   }, [projectId, contentText]);
 
+  // AUTO-SAVE CONTENT EDITS
+  React.useEffect(() => {
+    // ✅ FIXED: Prevent Auto-Save from saving "Loading..." into the database ever again!
+    if (!projectId || contentText === "No content to display" || contentText === "Loading...") return;
+    
+    const timeoutId = setTimeout(() => {
+      updateProjectMeta(projectId, { contentText });
+    }, 1000); // 1-second debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [projectId, contentText]);
+
+  // ❌ NOTE: The duplicate "Hydrate from persisted meta" useEffect that was below here 
+  // has been intentionally deleted because it was causing async conflicts.
+
  // 🆕 Hydrate from persisted meta
-    React.useEffect(() => {
-       if (!projectId) return;
-       const rec = getProject(projectId);
-       const m = rec?.meta || {};
-       // only set if a value exists to avoid clobbering current edits
-       if (typeof m.assetType === 'string') setAssetType(m.assetType);
-      if (typeof m.therapeuticContext === 'string') setTherapeuticContext(m.therapeuticContext);
-       if (typeof m.indication === 'string') setIndication(m.indication);
-       if (typeof m.targetAudience === 'string') setTargetAudience(m.targetAudience);
-       if (Array.isArray(m.additionalAudiences)) setAdditionalAudiences(m.additionalAudiences);
-       if (typeof m.contentText === 'string' && m.contentText.trim().length) {
-         setContentText(m.contentText);
-       }
-     }, [projectId]);
+    // React.useEffect(() => {
+    //    if (!projectId) return;
+    //    const rec = getProject(projectId);
+    //    const m = rec?.meta || {};
+    //    // only set if a value exists to avoid clobbering current edits
+    //    if (typeof m.assetType === 'string') setAssetType(m.assetType);
+    //   if (typeof m.therapeuticContext === 'string') setTherapeuticContext(m.therapeuticContext);
+    //    if (typeof m.indication === 'string') setIndication(m.indication);
+    //    if (typeof m.targetAudience === 'string') setTargetAudience(m.targetAudience);
+    //    if (Array.isArray(m.additionalAudiences)) setAdditionalAudiences(m.additionalAudiences);
+    //    if (typeof m.contentText === 'string' && m.contentText.trim().length) {
+    //      setContentText(m.contentText);
+    //    }
+    //  }, [projectId]);
   
 // // Sidebar Phases (unchanged)
 // const phases = useMemo(
@@ -343,7 +649,7 @@ const toggleAdditionalAudience = (aud) => {
       // ADDED: timestamp cache-buster and cache: 'no-store' to force a fresh DB check every time
       const timestamp = new Date().getTime();
       const dbResponse = await fetch(
-        `https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/segmented-content?t=${timestamp}`, 
+        `http://127.0.0.1:8000/api/segmented-content?t=${timestamp}`, 
         { cache: 'no-store' } 
       );
       if (!dbResponse.ok)
@@ -400,7 +706,7 @@ const toggleAdditionalAudience = (aud) => {
         // PROPER ERROR CHECKING: We will now see exact database errors if they happen
         const savePromises = segmentsToStore.map(async (seg) => {
           const saveRes = await fetch(
-            "https://://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/segmented-content",
+            "http://127.0.0.1:8000/api/segmented-content",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -461,54 +767,171 @@ const toggleAdditionalAudience = (aud) => {
     : "Proceed to Phase 2";
 
   //Hari
-  const handleComplete = async() => {
+//   const handleComplete = async() => {
 
-  if (!canCompleteP1) return;
+//   if (!canCompleteP1) return;
 
-    // Calling the helper function from the bottom
-    const segmentsForNext = GlobalAssetCapture(apiRawJson, localSegments, inboundLang);
-    // ✅ Debug BEFORE marking complete
-  console.log('GAC: Completing P1 for projectId:', projectId, {
-    projectName,
-    hasApiJson: !!apiRawJson,
-    localSegmentsCount: localSegments.length
-  });
+//     // Calling the helper function from the bottom
+//     const segmentsForNext = GlobalAssetCapture(apiRawJson, localSegments, inboundLang);
+//     // ✅ Debug BEFORE marking complete
+//   console.log('GAC: Completing P1 for projectId:', projectId, {
+//     projectName,
+//     hasApiJson: !!apiRawJson,
+//     localSegmentsCount: localSegments.length
+//   });
 
-// ✅ Persist any context you’ve collected here as REAL meta
+// // ✅ Persist any context you’ve collected here as REAL meta
 
-await updateProjectMeta(projectId, {
-       assetType,
-       therapeuticContext,
-       indication,
-       targetAudience,
-       additionalAudiences,
-       marketsCount,
-       marketCodes,
-       // 🆕 store edited source text so GAC can restore later
-       contentText,
-      // 🆕 store P1 produced segments so TM hub can restore later
-       segmentsP1: segmentsForNext,
-       segmentsP2: segmentsForNext,
-          // not strictly required here if you're calling resetP2DraftState below,
-   // but harmless if kept in one place:
-   p2DraftGenerated: false,
-   p2DraftGeneratedAt: null,
-   p2BannerDismissed: false,
-     });
+// await updateProjectMeta(projectId, {
+//        assetType,
+//        therapeuticContext,
+//        indication,
+//        targetAudience,
+//        additionalAudiences,
+//        marketsCount,
+//        marketCodes,
+//        // 🆕 store edited source text so GAC can restore later
+//        contentText,
+//       // 🆕 store P1 produced segments so TM hub can restore later
+//        segmentsP1: segmentsForNext,
+//        segmentsP2: segmentsForNext,
+//           // not strictly required here if you're calling resetP2DraftState below,
+//    // but harmless if kept in one place:
+//    p2DraftGenerated: false,
+//    p2DraftGeneratedAt: null,
+//    p2BannerDismissed: false,
+//      });
   
-      await markPhaseComplete(projectId, "P1");
-// ✅ Explicitly reset P2 flags for this new asset
-await resetP2DraftState(projectId);
+//       await markPhaseComplete(projectId, "P1");
+// // ✅ Explicitly reset P2 flags for this new asset
+// await resetP2DraftState(projectId);
 
 
-       const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
-       console.log('GAC: store after P1:', db[projectId]); // should show completed: ['P1']
+//        const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+//        console.log('GAC: store after P1:', db[projectId]); // should show completed: ['P1']
 
-    navigate("/smartTMTranslationHub", {
-      state: {  projectId, projectName, segments: segmentsForNext, lang: inboundLang, country },
+//     navigate("/smartTMTranslationHub", {
+//       state: {  projectId, projectName, segments: segmentsForNext, lang: inboundLang, country },
+//     });
+//   };
+
+  //Hari-25/3
+//     const handleComplete = async () => {
+//   if (!canCompleteP1) return;
+ 
+//   const segmentsForNext = GlobalAssetCapture(apiRawJson, localSegments, inboundLang);
+ 
+//   console.log('GAC: Completing P1 for projectId:', projectId, {
+//     projectName,
+//     hasApiJson: !!apiRawJson,
+//     localSegmentsCount: localSegments.length
+//   });
+ 
+//   // 1. Update Metadata
+//   await updateProjectMeta(projectId, {
+//     assetType,
+//     therapeuticContext,
+//     indication,
+//     targetAudience,
+//     additionalAudiences,
+//     marketsCount,
+//     marketCodes,
+//     contentText,
+//     segmentsP1: segmentsForNext,
+//     segmentsP2: segmentsForNext,
+//     p2DraftGenerated: false,
+//     p2DraftGeneratedAt: null,
+//     p2BannerDismissed: false,
+//   });
+ 
+//   // 2. Mark Phase Complete
+//   // This function in progressStore.js dispatches 'glocal_progress_updated'
+//   await markPhaseComplete(projectId, "P1");
+ 
+//   // 3. Reset P2 flags
+//   await resetP2DraftState(projectId);
+ 
+//   // ✅ FIX: Small micro-delay to ensure the Event Loop dispatches the
+//   // 'glocal_progress_updated' event before the component unmounts.
+//   await new Promise(resolve => setTimeout(resolve, 50));
+ 
+//   const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+//   console.log('GAC: store after P1:', db[projectId]);
+ 
+//   // 4. Navigate
+//   navigate("/smartTMTranslationHub", {
+//     state: {
+//       projectId, // Ensure this is passed so the next page can use the sync fallback
+//       projectName,
+//       segments: segmentsForNext,
+//       lang: inboundLang,
+//       country,
+//       forceRefresh: true // Hint to the next page to reload data
+//     },
+//   });
+// };
+  //Hari
+    const handleComplete = async () => {
+    if (!canCompleteP1) return;
+   
+    const segmentsForNext = GlobalAssetCapture(apiRawJson, localSegments, inboundLang);
+   
+    console.log('GAC: Completing P1 for projectId:', projectId, {
+      projectName,
+      hasApiJson: !!apiRawJson,
+      localSegmentsCount: localSegments.length
     });
-  };
+   
+    // 1. Update Metadata (SAFE: Preserves your text and dropdowns without destroying P2)
+    const safeMetaUpdate = {
+      assetType,
+      therapeuticContext,
+      indication,
+      targetAudience,
+      additionalAudiences,
+      marketsCount,
+      marketCodes,
+      contentText,
+      segmentsP1: segmentsForNext,
+    };
+    await updateProjectMeta(projectId, safeMetaUpdate);
+   
+    // ✅ 2. THE SAFETY SHIELD: Only do destructive resets if P1 is NOT already done!
+    if (!completedSet.has("P1")) {
+      // It's the first time, so we safely push these segments to P2 and reset the draft flags
+      await updateProjectMeta(projectId, {
+        segmentsP2: segmentsForNext,
+        p2DraftGenerated: false,
+        p2DraftGeneratedAt: null,
+        p2BannerDismissed: false,
+      });
 
+      // Mark Phase Complete (dispatches 'glocal_progress_updated')
+      await markPhaseComplete(projectId, "P1");
+     
+      // Reset P2 flags
+      await resetP2DraftState(projectId);
+    }
+   
+    // 3. Micro-delay to ensure the Event Loop safely finishes
+    await new Promise(resolve => setTimeout(resolve, 50));
+   
+    const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+    console.log('GAC: store after P1:', db[projectId]);
+   
+    // 4. Navigate forward safely
+    navigate("/smartTMTranslationHub", {
+      state: {
+        projectId, 
+        projectName,
+        segments: segmentsForNext,
+        lang: inboundLang,
+        country,
+        forceRefresh: true 
+      },
+    });
+  };  
+ 
   return (
     <div className={`gac-page ${isFocusMode ? 'is-focus' : ''}`} data-page="gac">
       {/* Sidebar */}
