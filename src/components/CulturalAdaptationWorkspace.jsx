@@ -35,7 +35,8 @@ export default function CulturalAdaptationWorkspace({
   const [activeTab, setActiveTab] = useState("adaptation");
   const projectId = state?.projectId;
   const [projectRec, setProjectRec] = useState(null);
-  const [copied, setCopied] = useState(false);  //23_03_sanju
+   const [copied, setCopied] = useState(false);  //23_03_sanju
+ 
 
   const [isLoadingProject, setIsLoadingProject] = useState(!!projectId);
  
@@ -70,25 +71,71 @@ export default function CulturalAdaptationWorkspace({
   //   };
   // }, [projectRec]);
 
+  //---------------------------------------------------
+
+  // const totalTarget = 4; // 🆕 Define this so the sidebar can see it
+
+  // // 🆕 NEW: Official Loading State for the Sidebar
+  // // 🆕 NEW: Official Loading State for the Sidebar
+  // //Hari-24/3-----------------------------------------------------
+  // const progressData = useMemo(() => {
+  //   if (!projectRec) {
+  //     // Return a temporary loading state while the database is fetching
+  //     return { completedSet: new Set(), completedCount: 0, overallPercent: 0, isProgressLoading: true };
+  //   }
+  //   const { completedSet } = computeProgress(projectRec);
+  //   const count = Math.min(completedSet.size, totalTarget);
+  //   return {
+  //     completedSet,
+  //     completedCount: count,
+  //     overallPercent: Math.round((count / totalTarget) * 100),
+  //     isProgressLoading: false
+  //   };
+  // }, [projectRec]);
+
+  // const { completedSet, completedCount, overallPercent, isProgressLoading } = progressData;
+
   const totalTarget = 4; // 🆕 Define this so the sidebar can see it
 
-  // 🆕 NEW: Official Loading State for the Sidebar
-  // 🆕 NEW: Official Loading State for the Sidebar
-  //Hari-24/3
+  //Hari-25/3 (Upgraded Universal Cache)
   const progressData = useMemo(() => {
-    if (!projectRec) {
-      // Return a temporary loading state while the database is fetching
-      return { completedSet: new Set(), completedCount: 0, overallPercent: 0, isProgressLoading: true };
+    let recToUse = projectRec;
+    const isRecEmpty = !recToUse || Object.keys(recToUse).length === 0;
+
+    // Synchronous fallback: If React state hasn't loaded or is empty, grab from cache
+    if (isRecEmpty && projectId) {
+      try {
+        const rawDb = localStorage.getItem('glocal_progress_v1');
+        const db = JSON.parse(rawDb || '{}');
+        if (db[projectId]) {
+            recToUse = db[projectId];
+        }
+      } catch (e) {
+        console.error("Error reading progress from localStorage:", e);
+      }
     }
-    const { completedSet } = computeProgress(projectRec);
+
+    // If still no record exists anywhere
+    if (!recToUse || Object.keys(recToUse).length === 0) {
+      return { 
+        completedSet: new Set(), 
+        completedCount: 0, 
+        overallPercent: 0, 
+        isProgressLoading: isRecEmpty 
+      };
+    }
+
+    // Calculate progress based on the guaranteed latest data
+    const { completedSet } = computeProgress(recToUse);
     const count = Math.min(completedSet.size, totalTarget);
+
     return {
       completedSet,
       completedCount: count,
       overallPercent: Math.round((count / totalTarget) * 100),
-      isProgressLoading: false
+      isProgressLoading: !projectRec || Object.keys(projectRec).length === 0
     };
-  }, [projectRec]);
+  }, [projectRec, projectId]);
 
   const { completedSet, completedCount, overallPercent, isProgressLoading } = progressData;
  
@@ -124,10 +171,12 @@ export default function CulturalAdaptationWorkspace({
  
   /** Prefer project from previous page */
   const projectName = state?.projectName ?? projectNameProp;
-  const country = state?.country ?? "unknown country";
+  //const country = state?.country ?? "unknown country";
+  const country = state?.country ?? projectRec?.meta?. Country ?? null;
   console.log(country);
+ 
 
-  const gotoPhase = usePhaseNavigation(projectId, projectName);
+  const gotoPhase = usePhaseNavigation(projectId, projectName,country); //31_03_sanju
   console.log('Cultural: projectId', state?.projectId);
   
 const rec = getProject(projectId);
@@ -208,19 +257,32 @@ console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.lengt
     return "";
   };
 
-  //23_03_sanju for mark as review button
+    //23_03_sanju for mark as review button
+
   const getCIStatus = (seg, overrides) => {
+
      const o = overrides?.[seg.id] || {};
+
      const status = String(
+
        // Prefer overrides first, then *ciStatus* from persisted P3, then last fall back to plain status
+
        o.status ?? o.ciStatus ?? seg.ciStatus ?? seg.status ?? ""
+
      ).toLowerCase();
+
      if (status === "reviewed") return "Reviewed";
+
      if (status === "completed") return "Reviewed"; // optional: treat Completed as Reviewed in the pill
+
      if (status === "flagged") return "Flagged for Review";   //sanju 23_03
+
      if (status === "dismissed") return "Dismissed";  //sanju 23_03
+
      return "Pending";
+
 };
+ 
 
   /** ========= Helpers to parse TPS (translation/problem/suggestion) ========= */
   const tryParseJSON = (str) => {
@@ -820,6 +882,7 @@ useEffect(() => {
           projectId,
           projectName,
           segments,
+          country, //31_03_sanju
         },
       });
     }
@@ -829,6 +892,7 @@ useEffect(() => {
           projectId,
           projectName,
           segments,
+          country, //31_03_sanju
         },
       });
     }
@@ -887,7 +951,39 @@ useEffect(() => {
 //   };
 /** Complete Phase 3 → next page */
 //Hari
-  const handleCompletePhase = async() => {
+  // const handleCompletePhase = async() => {
+  //   const mergedSegments = segments.map((s) => {
+  //     const o = segOverrides[s.id] || {};
+  //     return {
+  //       ...s,
+  //       ...(o.adapted !== undefined ? { adapted: o.adapted } : {}),
+  //       ...(o.status !== undefined ? { ciStatus: o.status } : {}),
+  //       ...(o.ciStatus !== undefined ? { ciStatus: o.ciStatus } : {}),
+  //     };
+  //   });
+
+  //  // ✅ Persist P3 outputs AND seed P4 (Using await ensures it finishes saving)
+  //  //Hari
+  //  await updateProjectMeta(projectId, { 
+  //    segmentsP3: mergedSegments,
+  //    segmentsP4: mergedSegments // 🆕 SEED PHASE 4
+  //  });
+
+  //  // ✅ Mark P3 complete
+  //  await markPhaseComplete(projectId, 'P3');
+
+  //   // 🆕 Safely navigate directly so the Regulatory page receives the segments
+  //   // navigate("/regulatoryCompliance", {
+  //   //   state: {
+  //   //     projectId,
+  //   //     projectName,
+  //   //     segments: mergedSegments,
+  //   //   },
+  //   // });\
+  //   gotoPhase('P4');
+  // };
+   //-----------------------------------------------------------------
+  const handleCompletePhase = async () => {
     const mergedSegments = segments.map((s) => {
       const o = segOverrides[s.id] || {};
       return {
@@ -898,28 +994,29 @@ useEffect(() => {
       };
     });
 
-   // ✅ Persist P3 outputs AND seed P4 (Using await ensures it finishes saving)
-   //Hari
+   // 1. Safely save Phase 3 data
    await updateProjectMeta(projectId, { 
-     segmentsP3: mergedSegments,
-     segmentsP4: mergedSegments // 🆕 SEED PHASE 4
+     segmentsP3: mergedSegments 
    });
 
-   // ✅ Mark P3 complete
-   await markPhaseComplete(projectId, 'P3');
+   // ✅ THE SAFETY SHIELD: Only seed Phase 4 if this is the first time!
+   if (!completedSet.has('P3')) {
+     await updateProjectMeta(projectId, { 
+       segmentsP4: mergedSegments 
+     });
+   }
 
-    // 🆕 Safely navigate directly so the Regulatory page receives the segments
-    // navigate("/regulatoryCompliance", {
-    //   state: {
-    //     projectId,
-    //     projectName,
-    //     segments: mergedSegments,
-    //   },
-    // });\
-    gotoPhase('P4');
-    navigate("/regulatoryCompliance", {
-      state: { projectName, segments: mergedSegments, country },
-    });
+   // 3. Mark P3 complete and navigate
+   await markPhaseComplete(projectId, 'P3');
+   //gotoPhase('P4');
+  navigate("/regulatoryCompliance", {     
+    state: {       
+      projectId,      
+      projectName,      
+      segments: mergedSegments, 
+      country: country, // Explicitly pass the country here
+      lang: state?.lang, 
+      therapyArea } });
   };
 
   /** Mark as Reviewed */
@@ -936,84 +1033,145 @@ useEffect(() => {
   };
 
   /** Flag segment for review 23_03_sanju*/
+
 const handleFlagForReview = () => {
-  if (!selectedResolved) return;
 
+  if (!selectedResolved) return;
+ 
     setSegOverrides((prev) => ({
+
     ...prev,
+
     [selectedResolved.id]: {
+
       ...prev[selectedResolved.id],
+
       status: "Flagged",
+
       ciStatus: "Flagged", // mirror for persistence/read-back
+
     },
+
   }));
-};
 
+};
+ 
 /** Dismiss AI suggestion (explicit rejection) 23_03_sanju*/
+
 /** Dismiss AI suggestion (explicit rejection) for suggestion level instead of segment 23_03_sanju*/
+
 const handleDismissSuggestion = (issueIndex = 0) => {
-  if (!selectedResolved) return;
 
+  if (!selectedResolved) return;
+ 
   setAnalysisBySegment(prev => {
+
     const analysis = prev[selectedResolved.id];
+
     if (!analysis) return prev;
-
+ 
     const nextIssues = [...analysis.sections[0].issues];
+
     nextIssues[issueIndex] = {
+
       ...nextIssues[issueIndex],
-      dismissed: true,
-    };
 
+      dismissed: true,
+
+    };
+ 
     return {
+
       ...prev,
+
       [selectedResolved.id]: {
+
         ...analysis,
+
         sections: [
+
           {
+
             ...analysis.sections[0],
+
             issues: nextIssues,
+
           },
+
         ],
+
       },
+
     };
+
   });
+
+};
+ 
+/* for alternative dismised suggestion 24_03_sanju*/
+
+/** Dismiss ALTERNATIVE suggestion (A/B) */
+
+const handleDismissAlternative = (altIndex = 0) => {
+
+  if (!selectedResolved) return;
+
+  setAnalysisBySegment(prev => {
+
+    const analysis = prev[selectedResolved.id];
+
+    if (!analysis || !Array.isArray(analysis.alternatives)) return prev;
+
+    const nextAlternatives = [...analysis.alternatives];
+
+    nextAlternatives[altIndex] = {
+
+      ...nextAlternatives[altIndex],
+
+      dismissed: true,
+
+    };
+
+    return {
+
+      ...prev,
+
+      [selectedResolved.id]: {
+
+        ...analysis,
+
+        alternatives: nextAlternatives,
+
+      },
+
+    };
+
+  });
+
 };
 
-/* for alternative dismised suggestion 24_03_sanju*/
-/** Dismiss ALTERNATIVE suggestion (A/B) */
-const handleDismissAlternative = (altIndex = 0) => {
-  if (!selectedResolved) return;
  
-  setAnalysisBySegment(prev => {
-    const analysis = prev[selectedResolved.id];
-    if (!analysis || !Array.isArray(analysis.alternatives)) return prev;
- 
-    const nextAlternatives = [...analysis.alternatives];
-    nextAlternatives[altIndex] = {
-      ...nextAlternatives[altIndex],
-      dismissed: true,
-    };
- 
-    return {
-      ...prev,
-      [selectedResolved.id]: {
-        ...analysis,
-        alternatives: nextAlternatives,
-      },
-    };
-  });
-};
- 
-    /** Helper: status pill */
+
+      /** Helper: status pill */
+
   const statusPill = (status) => {
+
     const s = String(status || "").toLowerCase();
+
     if (s === "completed") return "completed";
+
     if (s === "reviewed") return "reviewed";
+
     if (s === "flagged") return "flagged";   //sanju 23_03
+
     if (s === "dismissed") return "dismissed";  //sanju 23_03
+
     if (s === "pending") return "pending";
+
     return "neutral";
+
   };
+ 
 
   const TickIcon = ({ className = "" }) => (
     <svg width="14" height="14" viewBox="0 0 24 24" className={className} aria-hidden="true">
@@ -1070,7 +1228,7 @@ const handleDismissAlternative = (altIndex = 0) => {
       translated: seg.translated,
       targetLang: seg.lang || targetLang,
       country,
-      meta: { therapyArea, words: seg.words, title: seg.title, country },
+      meta: { therapyArea, words: seg.words, title: seg.title, country},
     };
   };
 
@@ -1188,7 +1346,8 @@ const handleDismissAlternative = (altIndex = 0) => {
     }
   };
 
-  //23_03_sanju
+  
+
   const handleReanalyze = async () => {
     if (!selectedResolved) return;
     setAnalysisBySegment((prev) => {
@@ -1198,7 +1357,7 @@ const handleDismissAlternative = (altIndex = 0) => {
     await handleAnalyzeClick();
   };
 
-  /** Accept suggestion (closes modal) 13_03_sanju*/
+  /** Accept suggestion (closes modal) */
   const handleAcceptSuggestion = (suggestionText) => {
     if (!selectedResolved) return;
 
@@ -1226,47 +1385,52 @@ const handleDismissAlternative = (altIndex = 0) => {
       },
     }));
 
-   // setIsAnalysisOpen(false);
+    //setIsAnalysisOpen(false);
   };
 
-  /** Apply selected alternative (keeps modal open) 13_03_sanju */
- const handleApplyAlternative = (text) => {
-  if (!selectedResolved) return;
-  const sanitized = String(text || "").trim();
-  if (!sanitized.length) return;
+  /** Apply selected alternative (keeps modal open) */
+  const handleApplyAlternative = (text) => {
+    if (!selectedResolved) return;
+    const sanitized = String(text || "").trim();
+    if (!sanitized.length) return;
 
-  setSegOverrides((prev) => ({
-    ...prev,
-    [selectedResolved.id]: {
-      ...prev[selectedResolved.id],
-      adapted: sanitized,
-      // Still Pending; becomes Reviewed only on the next action
-      status: "Pending",
-    },
-  }));
-};
+    setSegOverrides((prev) => ({
+      ...prev,
+      [selectedResolved.id]: {
+        ...prev[selectedResolved.id],
+        adapted: sanitized,
+        status: "Pending",
+      },
+    }));
+  };
 
- // Guard: enable only when adapted text exists 13_03_sanju
- const handleModalReviewedAndContinue = () => {
-  
+  // Guard: enable only when adapted text exists 13_03_sanju
+
+const handleModalReviewedAndContinue = () => {
+
   if (!hasAdaptedForSelected) return;
-
+ 
   // This sets status/ciStatus=Reviewed in segOverrides
+
   handleMarkReviewed();
-
+ 
   // Close modal and move to next segment
-  setIsAnalysisOpen(false);
 
-  const currentIdx = segments.findIndex((s) => s.id === selectedResolved.id);
-  const next = segments[currentIdx + 1];
-  if (next) setSelectedId(next.id);
-};
+  setIsAnalysisOpen(false);
+ 
+
+    const currentIdx = segments.findIndex((s) => s.id === selectedResolved.id);
+    const next = segments[currentIdx + 1];
+    if (next) setSelectedId(next.id);
+  };
 
   // Derived flags for the "Mark as Reviewed" button
 const adaptedTextForSelected = (segOverrides[selectedResolved?.id]?.adapted ?? selectedResolved?.adapted ?? "").trim();
-
 // NEW: boolean to reuse anywhere (main workspace and modal) 13_03_sanju
+
 const hasAdaptedForSelected = !!adaptedTextForSelected;
+
+ 
 
 const isReviewedForSelected = (() => {
   const s = String(
@@ -1279,7 +1443,7 @@ const isReviewedForSelected = (() => {
   return s === "reviewed";
 })();
 
-// Enabled only when adapted text exists and not already reviewed 13_03_sanju
+// Enabled only when adapted text exists and not already reviewed
 const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !isAnalyzing;
 
   /** Demo content (kept for look-and-feel in the panel) */
@@ -1685,7 +1849,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
   };
 
   /** ========= PDF GENERATION: AGENCY HANDOFF ========= */
-  // const neratePDF = () => {
+  // const handleGeneratePDF = () => {
   //   const doc = new jsPDF();
   //   const pageWidth = doc.internal.pageSize.getWidth();
   //   const margin = 20;
@@ -1694,7 +1858,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
   //   const addCenteredText = (text, y, size, isBold = false) => {
   //     doc.setFontSize(size);
   //     doc.setFont("helvetica", isBold ? "bold" : "normal");
-  //     const textWidth =handleGe doc.getTextWidth(text);
+  //     const textWidth = doc.getTextWidth(text);
   //     doc.text(text, (pageWidth - textWidth) / 2, y);
   //   };
  
@@ -1860,7 +2024,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
  
     // --- 2. SEND TO PYTHON ---
 
-    const response = await fetch('http://localhost:8000/generate-pdf', {
+    const response = await fetch('http://localhost:5000/generate-pdf', {
 
       method: 'POST',
 
@@ -1975,9 +2139,9 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
               ✓
             </span>
           )}
-          {p.status==="active"&& !isDone && isProgressLoading&& 
+          {p.status==="active"&& !isDone && isProgressLoading&& (
             <span className="tm-phase-dot" />
-          }
+    )}
         </button>
       );
     })}
@@ -2506,18 +2670,27 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
             <span className="icon-magic">✨</span> Regenerate
           </button> */}
 
-         <button
+          <button
+
   className="tm-btn outline small"
+
   onClick={() => {
+
     navigator.clipboard.writeText(fullDraftText);
+
     setCopied(true);  {/* //23_03_sanju  changed in button for pop up */}
+
     setTimeout(() => setCopied(false), 1500);  {/* //23_03_sanju  changed in button for pop up */}
+
   }}
 >
-           <span className="icon-copy">❐</span> Copy to Clipboard
-          </button>
+<span className="icon-copy">❐</span> Copy to Clipboard
+</button>
+
           {/* //23_03_sanju  changed in button for pop up  */}
+
           {copied && <span className="tm-copied-badge">Copied ✓</span>}
+ 
         </div>
       </div>
       <div className="tm-draft-text-area">
@@ -2547,31 +2720,49 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
       Comprehensive analysis of cultural adaptations
       </span>
     </div>
-              <div className="tm-report-actions">
+                       <div className="tm-report-actions">
+
                 {/* //23_03_sanju  changed in button for pop up  */}
-                <button
+<button
+
   className="tm-btn outline small"
+
   onClick={() => {
+
     navigator.clipboard.writeText(fullReportText);
+
     setCopied(true);
+
     setTimeout(() => setCopied(false), 1500);
+
   }}
+
   title="Copy Full report to clipboard"
 >
+
                    ❐ Copy Full Report
-                </button>
+</button>
+
                  {copied && <span className="tm-copied-badge">Copied Full Report</span>} {/*23_03_sanju */}
+
                 {/* <button className="tm-btn outline small" onClick={expandAll} title="Expand all">
+
                   ⤢ Expand All
-                </button> */}
+</button> */}
+
                 {/* <button
+
                   className="tm-btn outline small"
+
                   onClick={collapseAll}
+
                   title="Collapse all"
-                >
+>
+
                   ⤡ Collapse All
-                </button> */}
-              </div>
+</button> */}
+</div>
+ 
             </div>
 
             {/* Report List */}
@@ -2592,30 +2783,59 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
 
                 return (
                   <div key={r.id} className="tm-report-card">
-                     {/* //23_03_sanju dropdown same as smart tm */}
-                <div
+                    <div
+
   className="tm-report-card-head tm-accordion-head"
+
   onClick={() => toggleExpanded(r.id)}
+
   role="button"
+
   aria-expanded={expanded}
 >
-  <div className="tm-report-card-title-wrap">
-    
-    <span className="tm-report-card-title">Section {r.index}</span>
-  </div>
-
-  <div className="tm-report-card-tools">
-    <span className="tm-chip soft">
-      {r.source.split(/\s+/).length} words
-    </span>
-
-    <span className={`tm-accordion-chevron ${expanded ? "open" : ""}`}>
-      ▾
-    </span>
-  </div>
+<div className="tm-report-card-title-wrap">
+<span className="tm-report-card-title">Section {r.index}</span>
 </div>
+ 
 
+                      <div className="tm-report-card-tools">
+                        {/* <span className={`tm-mini-score ${scoreBadgeClass}`}>
+                          {r.score != null ? r.score : "—"}
+                        </span>
+                        <span className="tm-lang-chip" title="Target language">
+                          {r.lang || getTargetLang(therapyArea) || "—"}
+                        </span>
 
+                        <button
+                          className="tm-btn ghost small"
+                          title="Copy adapted text"
+                          onClick={() => navigator.clipboard.writeText(r.adapted || "")}
+                        >
+                          Copy
+                        </button>
+                        <button
+                          className="tm-btn ghost small"
+                          onClick={() => toggleExpanded(r.id)}
+                          aria-expanded={expanded}
+                          aria-controls={`report-body-${r.id}`}
+                          title={expanded ? "Collapse" : "Expand"}
+                        >
+                          {expanded ? "Hide" : "Show"}
+                        </button>
+                      </div>
+                    </div> */}
+                      <span className="tm-chip soft">
+
+      {r.source.split(/\s+/).length} words
+</span>
+ 
+    <span className={`tm-accordion-chevron ${expanded ? "open" : ""}`}>
+
+      ▾
+</span>
+</div>
+</div>
+ 
 
                     {expanded && (
                       <div className="tm-report-card-body" id={`report-body-${r.id}`}>
@@ -2758,159 +2978,220 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
 
                   {/* Sections */}
                   <div className="ai-sections">
+
                     {Array.isArray(analysis.sections) && analysis.sections.length > 0 ? (
+
                       analysis.sections.map((sec) => (
-                        <div key={sec.id} className="ai-section">
-                          <div className="ai-section-head">
-                            <span className="tm-chip">{sec.title}</span>
-                            <div className="ai-section-score">
-                              <span>{sec.score ?? "--"}/100</span>
-                            </div>
-                          </div>
-
+<div key={sec.id} className="ai-section">
+<div className="ai-section-head">
+<span className="tm-chip">{sec.title}</span>
+<div className="ai-section-score">
+<span>{sec.score ?? "--"}/100</span>
+</div>
+</div>
+ 
                            {/* 24_03_sanju_dismissed updated for respective suggestion */}
+
                          {Array.isArray(sec.issues) && (
-  <>
+<>
+
     {/* ✅ 1. ACTIVE (NOT DISMISSED) SUGGESTIONS */}
+
     {sec.issues
+
       .filter(issue => !issue.dismissed)
+
       .map((issue, idx) => (
-        <div key={idx} className="ai-issue-card">
- 
-          <div className="ai-issue-meta">
-            <span className="ai-issue-priority">
+<div key={idx} className="ai-issue-card">
+<div className="ai-issue-meta">
+<span className="ai-issue-priority">
+
               {issue.priority?.toUpperCase()} PRIORITY ISSUE
-            </span>
-          </div>
- 
-          <div className="ai-issue-block">
-            <div className="ai-issue-label">Translation:</div>
-            <div className="ai-issue-content">
+</span>
+</div>
+<div className="ai-issue-block">
+<div className="ai-issue-label">Translation:</div>
+<div className="ai-issue-content">
+
               {issue.translation?.trim()?.length
+
                 ? issue.translation
+
                 : selectedResolved?.translated?.trim()?.length
+
                 ? selectedResolved.translated
+
                 : "— No translation provided —"}
-            </div>
-          </div>
- 
-          <div className="ai-issue-block">
-            <div className="ai-issue-label">Problem:</div>
-            <div className="ai-issue-content">
+</div>
+</div>
+<div className="ai-issue-block">
+<div className="ai-issue-label">Problem:</div>
+<div className="ai-issue-content">
+
               {issue.problem || "—"}
-            </div>
-          </div>
- 
-          <div className="ai-issue-block">
-            <div className="ai-issue-label">Suggestion</div>
-            <div className="ai-issue-content">
+</div>
+</div>
+<div className="ai-issue-block">
+<div className="ai-issue-label">Suggestion</div>
+<div className="ai-issue-content">
+
               {issue.suggestion || "—"}
-            </div>
-          </div>
- 
-          <div className="ai-issue-actions">
-            <button
+</div>
+</div>
+<div className="ai-issue-actions">
+<button
+
               className="tm-btn primary"
+
               onClick={() => handleAcceptSuggestion(issue.suggestion)}
-            >
+>
+
               Accept Suggestion
-            </button>
- 
-            <button
+</button>
+<button
+
               className="tm-btn outline"
+
               onClick={handleFlagForReview}
-            >
+>
+
               Flag for Review
-            </button>
- 
-            <button
+</button>
+<button
+
               className="tm-btn ghost"
+
               onClick={() => handleDismissSuggestion(idx)}
-            >
+>
+
               Dismiss
-            </button>
-          </div>
-        </div>
+</button>
+</div>
+</div>
+
       ))}
- 
+
     {/* ✅ 2. DISMISSED SUGGESTIONS (SHOWN BELOW) */}
+
     {sec.issues.some(issue => issue.dismissed) && (
-      <div className="ai-dismissed-section">
-        <div className="ai-dismissed-title tm-light">
+<div className="ai-dismissed-section">
+<div className="ai-dismissed-title tm-light">
+
           Dismissed Suggestions
-        </div>
- 
+</div>
+
         {sec.issues
+
           .filter(issue => issue.dismissed)
+
           .map((issue, idx) => (
-            <div key={`dismissed-${idx}`} className="ai-issue-card dismissed">
-              <span className="tm-light small">
+<div key={`dismissed-${idx}`} className="ai-issue-card dismissed">
+<span className="tm-light small">
+
                 ✅ Marked as Dismissed
-              </span>
-              <div className="ai-issue-content tm-light">
+</span>
+<div className="ai-issue-content tm-light">
+
                 {issue.suggestion}
-              </div>
-            </div>
+</div>
+</div>
+
           ))}
-      </div>
+</div>
+
     )}
-  </>
+</>
+
 )}       
-                        </div>
+</div>
+
                       ))
+
                     ) : (
-                      <div className="tm-light">No section details provided.</div>
+<div className="tm-light">No section details provided.</div>
+
                     )}
-                  </div>
-
+</div>
+ 
                   {/* Terminology Validation */}
-                  <TerminologyValidationPanel
-  score={analysis.overallScore}
-  altList={analysis.alternatives}
-  onApplyAlt={(text) => handleApplyAlternative(text)}
-  onFlag={handleFlagForReview}
-  onDismiss={handleDismissAlternative} // 24_03_sanju
-  selectedMap={segChipSelections}
-  onSelectChip={(termId, val) => setChipSelectionForSeg(termId, val)}
-/>
-                </>
-              );
-            })()}
-          </>
-        )}
-    </div>
-  </div>
+<TerminologyValidationPanel
 
-  {/* FOOTER (fixed, not scrollable) 13_03_sanju */}
- <div className="tm-modal-footer">
-  <div className="ai-footer-actions">
+  score={analysis.overallScore}
+
+  altList={analysis.alternatives}
+
+  onApplyAlt={(text) => handleApplyAlternative(text)}
+
+  onFlag={handleFlagForReview}
+
+  onDismiss={handleDismissAlternative} // 24_03_sanju
+
+  selectedMap={segChipSelections}
+
+  onSelectChip={(termId, val) => setChipSelectionForSeg(termId, val)}
+
+/>
+</>
+
+              );
+
+            })()}
+</>
+
+        )}
+</div>
+</div>
+
+ 
+
+  {/* FOOTER (fixed, not scrollable) */}
+  <div className="tm-modal-footer">
+<div className="ai-footer-actions">
+
     {/* <button className="tm-btn outline" onClick={() => setIsAnalysisOpen(false)}>
+
       Close
-    </button> */}
+</button> */}
+
 {/* //23_03_sanju  RE-Analyze button*/}
-    <button
+<button
+
   className={`tm-btn primary ${isAnalyzing ? "is-loading" : ""}`}
+
   onClick={handleReanalyze}
+
   disabled={isAnalyzing}
 >
+
   {isAnalyzing ? "Re-analyzing…" : "Re-analyze"}
 </button>
-
+ 
     <button
+
       className="tm-btn primary"
+
       onClick={handleModalReviewedAndContinue}
+
       disabled={!hasAdaptedForSelected}
+
       aria-disabled={!hasAdaptedForSelected}
+
       title={
+
         !hasAdaptedForSelected
+
           ? "Accept/apply a cultural adaptation first"
+
           : "Mark this segment as Reviewed and go to the next"
+
       }
-    >
+>
+
       Mark as Reviewed &amp; Continue
-    </button>
-  </div>
+</button>
 </div>
+</div>
+ 
 </Modal>
       </div>
     </div>
@@ -3026,8 +3307,8 @@ function TerminologyValidationPanel({
   selectedMap = {},
   onSelectChip,
   onApplyAlt,
-  onFlag,  //sanju 23_03
-  onDismiss  //sanju 23_03
+  onFlag, //sanju
+  onDismiss
 }) {
   const hasAB = Array.isArray(altList) && altList.length > 0;
 
@@ -3071,43 +3352,59 @@ function TerminologyValidationPanel({
       </div>
 
       <div className="ai-term-list">
+
                 {/* Render suggestionA/suggestionB as first two "terms" 24_03_sanju */}
+
         {/* ✅ DISMISSED ALTERNATIVES SHOWN BELOW */}
+
 {hasAB && altList.some(alt => alt.dismissed) && (
-  <div className="ai-dismissed-section">
-    <div className="ai-dismissed-title tm-light">
+<div className="ai-dismissed-section">
+<div className="ai-dismissed-title tm-light">
+
       Dismissed Alternatives
-    </div>
- 
+</div>
+
     {altList
+
       .filter(alt => alt.dismissed)
+
       .map((alt, idx) => (
-        <div
+<div
+
           key={`alt-dismissed-${idx}`}
+
           className="ai-term-card dismissed"
-        >
-          <span className="tm-light small">
+>
+<span className="tm-light small">
+
             ✅ Marked as Dismissed
-          </span>
-          <div className="ai-term-issue tm-light">
+</span>
+<div className="ai-term-issue tm-light">
+
             {alt.label}: {alt.text}
-          </div>
-        </div>
+</div>
+</div>
+
       ))}
-  </div>
+</div>
+
 )}
- 
+
 {/* ✅ ACTIVE (NOT DISMISSED) ALTERNATIVES * 24_03_sanju */}
+
 {hasAB &&
+
   altList
+
     .filter(alt => !alt.dismissed)
+
     .map((alt, idx) => (
-      <div key={`alt-${idx}`} className="ai-term-card">
+<div key={`alt-${idx}`} className="ai-term-card">
+<div className="ai-term-badge-row">
+<span className="ai-needs-badge">⚠ NEEDS REVIEW</span>
+</div>
  
-              <div className="ai-term-badge-row">
-                <span className="ai-needs-badge">⚠ NEEDS REVIEW</span>
-              </div>
- 
+
               {/* Treat label as "Term" display */}
               <div
                 className="ai-term-label"
@@ -3125,12 +3422,12 @@ function TerminologyValidationPanel({
                   Score: {alt.score ?? "—"}/100
                 </span>
               </div>
- 
+
               {/* Show the suggestion text itself */}
               <div className="ai-term-issue" style={{ marginTop: 8 }}>
                 <strong>Suggestion:</strong>&nbsp;{alt.text || "—"}
               </div>
- 
+
               {/* Actions: Apply this alternative */}
               <div className="ai-term-actions">
                 <button
@@ -3141,21 +3438,9 @@ function TerminologyValidationPanel({
                 >
                   Apply {alt.label}
                 </button>
-                {/* //23_03    sanju                             */}
-                                 <button
-  className="tm-btn outline"
-  onClick={onFlag}
->
-  Flag for Review
-</button>
- {/* 24_03_sanju */}
- <button
-            className="tm-btn ghost"
-            onClick={() => onDismiss?.(idx)}
-          >
- 
-  Dismiss
-</button>
+                {/* sanju */}
+                <button className="tm-btn outline" onClick={onFlag}>Flag for Review</button>
+                <button className="tm-btn ghost" onClick={()=>onDismiss?.(idx)}>Dismiss</button>
               </div>
             </div>
           ))}

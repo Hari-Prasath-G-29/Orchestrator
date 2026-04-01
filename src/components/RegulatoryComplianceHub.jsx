@@ -92,31 +92,121 @@ export default function RegulatoryComplianceHub({
 
   // ✅ 1. UPDATED: Provide the isProgressLoading state
   //Hari-24/3
+  // const progressData = useMemo(() => {
+  //   if (!projectRec) {
+  //     // Return a temporary loading state while the database is fetching
+  //     return { count: 0, percent: 0, set: new Set(), isProgressLoading: true };
+  //   }
+ 
+  //   const { completedSet } = computeProgress(projectRec);
+  //   const count = Math.min(completedSet.size, totalTargetPhases);
+  //   const percent = Math.round((count / totalTargetPhases) * 100);
+ 
+  //   return { count, percent, set: completedSet, isProgressLoading: false };
+  // }, [projectRec]);
+ 
+  // // Unified variable names to match all your JSX parts
+  // const completedCount = progressData.count;
+  // const overallPercent = progressData.percent;
+  // const completedSet   = progressData.set;
+  // const isProgressLoading = progressData.isProgressLoading; // 🆕 Extracted safely!
+ 
+  // // Aliases to prevent "ReferenceError" in different parts of your file
+  // const overallPct  = overallPercent;
+  // const progressPct = overallPercent;
+
+  //Kathir-25/3-------------------------------------
+  // const progressData = useMemo(() => {
+  //   let recToUse = projectRec;
+ 
+  //   // Synchronous fallback: If React state (projectRec) hasn't loaded yet,
+  //   // immediately check localStorage to prevent the progress bar from flickering.
+  //   if (!recToUse && projectId) {
+  //     try {
+  //       const rawDb = localStorage.getItem('glocal_progress_v1');
+  //       const db = JSON.parse(rawDb || '{}');
+  //       recToUse = db[projectId];
+  //     } catch (e) {
+  //       console.error("Error reading progress from localStorage:", e);
+  //     }
+  //   }
+ 
+  //   // If still no record exists, return the temporary loading state
+  //   if (!recToUse) {
+  //     return { count: 0, percent: 0, set: new Set(), isProgressLoading: true };
+  //   }
+ 
+  //   // Calculate progress based on the guaranteed latest data
+  //   const { completedSet } = computeProgress(recToUse);
+  //   const count = Math.min(completedSet.size, totalTargetPhases);
+  //   const percent = Math.round((count / totalTargetPhases) * 100);
+ 
+  //   return { count, percent, set: completedSet, isProgressLoading: !projectRec };
+  // }, [projectRec, projectId]); // Added projectId to dependencies
+ 
+  // // Unified variable names to match all your JSX parts
+  // const completedCount = progressData.count;
+  // const overallPercent = progressData.percent;
+  // const completedSet   = progressData.set;
+  // const isProgressLoading = progressData.isProgressLoading;
+ 
+  // // Aliases to prevent "ReferenceError" in different parts of your file
+  // const overallPct  = overallPercent;
+  // const progressPct = overallPercent;
+
+  // ✅ UPGRADED UNIVERSAL CACHE
   const progressData = useMemo(() => {
-    if (!projectRec) {
-      // Return a temporary loading state while the database is fetching
-      return { count: 0, percent: 0, set: new Set(), isProgressLoading: true };
+    let recToUse = projectRec;
+    const isRecEmpty = !recToUse || Object.keys(recToUse).length === 0;
+
+    // Synchronous fallback: If React state hasn't loaded or is empty, grab from cache
+    if (isRecEmpty && projectId) {
+      try {
+        const rawDb = localStorage.getItem('glocal_progress_v1');
+        const db = JSON.parse(rawDb || '{}');
+        if (db[projectId]) {
+            recToUse = db[projectId];
+        }
+      } catch (e) {
+        console.error("Error reading progress from localStorage:", e);
+      }
     }
- 
-    const { completedSet } = computeProgress(projectRec);
+
+    // If still no record exists anywhere
+    if (!recToUse || Object.keys(recToUse).length === 0) {
+      return { 
+        count: 0, 
+        percent: 0, 
+        set: new Set(), 
+        isProgressLoading: isRecEmpty 
+      };
+    }
+
+    // Calculate progress based on the guaranteed latest data
+    const { completedSet } = computeProgress(recToUse);
     const count = Math.min(completedSet.size, totalTargetPhases);
-    const percent = Math.round((count / totalTargetPhases) * 100);
- 
-    return { count, percent, set: completedSet, isProgressLoading: false };
-  }, [projectRec]);
- 
+
+    return {
+      count: count,
+      percent: Math.round((count / totalTargetPhases) * 100),
+      set: completedSet,
+      isProgressLoading: !projectRec || Object.keys(projectRec).length === 0
+    };
+  }, [projectRec, projectId]);
+
   // Unified variable names to match all your JSX parts
   const completedCount = progressData.count;
   const overallPercent = progressData.percent;
   const completedSet   = progressData.set;
-  const isProgressLoading = progressData.isProgressLoading; // 🆕 Extracted safely!
+  const isProgressLoading = progressData.isProgressLoading;
  
   // Aliases to prevent "ReferenceError" in different parts of your file
   const overallPct  = overallPercent;
   const progressPct = overallPercent;
   const country = state?.country ?? null;
+  console.log(country);
   const projectName = state?.projectName ?? projectNameProp;
-  const gotoPhase = usePhaseNavigation(projectId, projectName);
+  const gotoPhase = usePhaseNavigation(projectId, projectName,country); //31_03_sanju
 
   // const projectRec = useMemo(() => getProject(projectId), [projectId]);
 
@@ -358,16 +448,16 @@ export default function RegulatoryComplianceHub({
     : 0;
   
 
-  /** Sidebar: retain context when moving across phases */
+  /** Sidebar: retain context when moving across phases 31_03_sanju */
   const handlePhaseClick = (phaseName) => {
     if (phaseName === "Global Context Capture") {
-      navigate("/globalAssetCapture", { state: { projectName, segments } });
+      navigate("/globalAssetCapture", { state: {projectId, projectName, segments,country } });
     }
     if (phaseName === "Smart TM Translation") {
-      navigate("/smartTMTranslationHub", { state: { projectName, segments } });
+      navigate("/smartTMTranslationHub", { state: { projectId, projectName, segments, country } });
     }
     if (phaseName === "Cultural Intelligence") {
-      navigate("/culturalAdaptationWorkspace", { state: { projectName, segments } });
+      navigate("/culturalAdaptationWorkspace", { state: { projectId, projectName, segments, country } });
     }
   };
 
@@ -725,21 +815,42 @@ export default function RegulatoryComplianceHub({
   };
 
   //Hari
-  const handleCompleteCompliance = async () => {
+  // const handleCompleteCompliance = async () => {
+  //   if (!projectId) return;
+  //   try {
+  //     // 1. Mark Phase 4 (Regulatory) as complete in the DB
+  //     //Hari
+  //     await markPhaseComplete(projectId, 'P4');
+     
+  //     // 2. Trigger the local event to refresh the progress bar immediately
+  //     window.dispatchEvent(new Event('glocal_progress_updated'));
+     
+  //     console.log("Compliance phase marked as complete.");
+  //   } catch (err) {
+  //     console.error("Failed to complete phase:", err);
+  //   }
+  // };
+
+  //Kathir-25/3
+    const handleCompleteCompliance = async () => {
     if (!projectId) return;
     try {
       // 1. Mark Phase 4 (Regulatory) as complete in the DB
-      //Hari
       await markPhaseComplete(projectId, 'P4');
+     
+      // ✅ FIX: Micro-delay to ensure the Sidebar and Progress Ring
+      // receive the "100%" update event before the function finishes.
+      await new Promise(resolve => setTimeout(resolve, 50));
      
       // 2. Trigger the local event to refresh the progress bar immediately
       window.dispatchEvent(new Event('glocal_progress_updated'));
      
-      console.log("Compliance phase marked as complete.");
+      console.log("Compliance phase marked as complete. Progress should now be 100%.");
     } catch (err) {
       console.error("Failed to complete phase:", err);
     }
   };
+ 
 
   /* ================= Request MLR Exception ================= */
   const [isMlrOpen, setIsMlrOpen] = useState(false);
@@ -1031,14 +1142,24 @@ const overallComplianceScoreFromModal = analysisData?.score ?? null; // number |
             <span className="tm-phase-sub">{p.sub}</span>
           </span>
           {/* Checkmark appears only if the database confirms phase is complete */}
-          {isDone && (
+          {/* {isDone && (
+            <span className="tm-phase-check" aria-hidden={true}>
+              ✓
+            </span>
+          )} */}
+
+          {/* Checkmark appears only if the database confirms phase is complete */}
+          {isDone && !isProgressLoading && (
             <span className="tm-phase-check" aria-hidden={true}>
               ✓
             </span>
           )}
-          {isActive && !isDone && (
+          {isActive && !isDone && !isProgressLoading && (
             <span className="tm-phase-dot" aria-hidden={true} />
           )}
+          {/* {isActive && !isDone && (
+            <span className="tm-phase-dot" aria-hidden={true} />
+          )} */}
         </button>
       );
     })}
@@ -1167,7 +1288,7 @@ const overallComplianceScoreFromModal = analysisData?.score ?? null; // number |
             {isLoadingProject ? (
               <div className="tm-workspace-loading" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 0', color: '#6B7280' }}>
                 <Loader2 size={32} className="animate-spin mb-4 text-emerald-600" />
-                <p>Syncing Regulatory Data...</p>
+                <p>Syncing Data...</p>
               </div>
             ) : (
               
@@ -1460,8 +1581,8 @@ const overallComplianceScoreFromModal = analysisData?.score ?? null; // number |
               <div className="rcm-overall">
                 <div className="rcm-overall__left">
                   <div className="rcm-overall__label">Overall Compliance Score</div>
-                  <div className="rcm-overall__value">   {analysisData.score !== null ? `${analysisData.score}/100` : ""} </div>
-                </div>
+                    <div className="rcm-overall__value">   {analysisData.score !== null ? `${analysisData.score}/100` : ""} </div>
+                    </div>
                 <div className="rcm-overall__right">
                   <div className="rcm-overall__sub">Risk Level</div>
                   <div className={`rcm-overall__risk ${analysisData.risk.toLowerCase()}`}>
@@ -1647,7 +1768,7 @@ const overallComplianceScoreFromModal = analysisData?.score ?? null; // number |
             <div className="rcm-modal__footer">
               <button
                 className={`btn outline ${isReAnalyzing ? "is-loading" : ""}`}
-                onClick={openAnalysisModal}   //27_03_sanju
+                onClick={openAnalysisModal}//27_03_sanju
                 disabled={isReAnalyzing || isReAnalyzeDisabled}
               >
                 {isReAnalyzing ? "Re-analyzing…" : "Re-Analyze with AI"}

@@ -690,8 +690,11 @@ export default function SmartTMTranslationHub({
   const [projectRec, setProjectRec] = useState(null);
   // // ✅ 1. Use async State for the project record
   // const [projectRec, setProjectRec] = useState(null);
-  const inboundLang = projectRec?.meta?.targetLang || state?.lang || state?.sourceLang || "EN";
   const country = state?.country ?? "Unknown Country";
+  console.log(country);
+  const inboundLang = projectRec?.meta?.targetLang || state?.lang || state?.sourceLang || "EN";
+  
+  console.log(country);
   // const refreshProgress = async () => {
   //   if (projectId) {
   //     const p = await getProject(projectId);
@@ -747,22 +750,142 @@ const totalTarget = 4;
   // const { completedSet, completedCount, overallPercent } = progressData;
   // 🆕 NEW: Official Loading State for the Sidebar
   //Hari-24/3
+  // const progressData = useMemo(() => {
+  //   if (!projectRec) {
+  //     // Return a temporary loading state while the database is fetching
+  //     return { completedSet: new Set(), completedCount: 0, overallPercent: 0, isProgressLoading: true };
+  //   }
+  //   const { completedSet } = computeProgress(projectRec);
+  //   const count = Math.min(completedSet.size, totalTarget);
+  //   return {
+  //     completedSet,
+  //     completedCount: count,
+  //     overallPercent: Math.round((count / totalTarget) * 100),
+  //     isProgressLoading: false
+  //   };
+  // }, [projectRec]);
+
+  // const { completedSet, completedCount, overallPercent, isProgressLoading } = progressData;
+
+  //Hari-25/3
+  //  const progressData = useMemo(() => {
+  //   let recToUse = projectRec;
+ 
+  //   // Synchronous fallback: If React state hasn't loaded yet,
+  //   // grab the latest data directly from localStorage to prevent progress flicker.
+  //   if (!recToUse && projectId) {
+  //     try {
+  //       const rawDb = localStorage.getItem('glocal_progress_v1');
+  //       const db = JSON.parse(rawDb || '{}');
+  //       recToUse = db[projectId];
+  //     } catch (e) {
+  //       console.error("Error reading progress from localStorage:", e);
+  //     }
+  //   }
+ 
+  //   // If still no record exists, return the safe loading state
+  //   if (!recToUse) {
+  //     return { completedSet: new Set(), completedCount: 0, overallPercent: 0, isProgressLoading: true };
+  //   }
+ 
+  //   // Calculate progress based on the guaranteed latest data
+  //   const { completedSet } = computeProgress(recToUse);
+  //   const count = Math.min(completedSet.size, totalTarget);
+   
+  //   return {
+  //     completedSet,
+  //     completedCount: count,
+  //     overallPercent: Math.round((count / totalTarget) * 100),
+  //     isProgressLoading: !projectRec
+  //   };
+  // }, [projectRec, projectId]);
+  //Hari-25/3--------------------------------------------------------------------
+  // const progressData = useMemo(() => {
+  //   let recToUse = projectRec;
+
+  //   // ✅ FIXED: Safely check if the database record is actually empty (not just null)
+  //   const isRecEmpty = !recToUse || Object.keys(recToUse).length === 0;
+
+  //   // Synchronous fallback: If React state hasn't loaded or is empty, grab from cache
+  //   if (isRecEmpty && projectId) {
+  //     try {
+  //       const rawDb = localStorage.getItem('glocal_progress_v1');
+  //       const db = JSON.parse(rawDb || '{}');
+  //       if (db[projectId]) {
+  //           recToUse = db[projectId];
+  //       }
+  //     } catch (e) {
+  //       console.error("Error reading progress from localStorage:", e);
+  //     }
+  //   }
+
+  //   // If still no record exists anywhere (both DB and Cache are totally empty)
+  //   if (!recToUse || Object.keys(recToUse).length === 0) {
+  //     return { 
+  //       completedSet: new Set(), 
+  //       completedCount: 0, 
+  //       overallPercent: 0, 
+  //       isProgressLoading: isRecEmpty 
+  //     };
+  //   }
+
+  //   // Calculate progress based on the guaranteed latest data
+  //   const { completedSet } = computeProgress(recToUse);
+  //   const count = Math.min(completedSet.size, totalTarget);
+
+  //   return {
+  //     completedSet,
+  //     completedCount: count,
+  //     overallPercent: Math.round((count / totalTarget) * 100),
+  //     isProgressLoading: !projectRec // We found real data, so instantly stop the loading state!
+  //   };
+  // }, [projectRec, projectId]);
+
+  //Hari-25/3 (Upgraded Universal Cache)
   const progressData = useMemo(() => {
-    if (!projectRec) {
-      // Return a temporary loading state while the database is fetching
-      return { completedSet: new Set(), completedCount: 0, overallPercent: 0, isProgressLoading: true };
+    let recToUse = projectRec;
+
+    // ✅ FIXED: Safely check if the database record is actually empty
+    const isRecEmpty = !recToUse || Object.keys(recToUse).length === 0;
+
+    // Synchronous fallback: If React state hasn't loaded or is empty, grab from cache
+    if (isRecEmpty && projectId) {
+      try {
+        const rawDb = localStorage.getItem('glocal_progress_v1');
+        const db = JSON.parse(rawDb || '{}');
+        if (db[projectId]) {
+            recToUse = db[projectId];
+        }
+      } catch (e) {
+        console.error("Error reading progress from localStorage:", e);
+      }
     }
-    const { completedSet } = computeProgress(projectRec);
+
+    // If still no record exists anywhere (both DB and Cache are totally empty)
+    if (!recToUse || Object.keys(recToUse).length === 0) {
+      return { 
+        completedSet: new Set(), 
+        completedCount: 0, 
+        overallPercent: 0, 
+        isProgressLoading: isRecEmpty 
+      };
+    }
+
+    // Calculate progress based on the guaranteed latest data
+    const { completedSet } = computeProgress(recToUse);
     const count = Math.min(completedSet.size, totalTarget);
+
     return {
       completedSet,
       completedCount: count,
       overallPercent: Math.round((count / totalTarget) * 100),
-      isProgressLoading: false
+      // ✅ FIXED: Look at the REAL database state for the loading text!
+      isProgressLoading: !projectRec || Object.keys(projectRec).length === 0
     };
-  }, [projectRec]);
-
+  }, [projectRec, projectId]);
+ 
   const { completedSet, completedCount, overallPercent, isProgressLoading } = progressData;
+ 
   
 
   // 🔁 Restore "draft generated" flag (from meta or localStorage)
@@ -781,7 +904,12 @@ const totalTarget = 4;
   
   // ✅ 2. Read segments safely once projectRec is loaded
   // ✅ 2. Read segments safely and stably
-  const persistedSegmentsP2 = React.useMemo(() => projectRec?.meta?.segmentsP2 || [], [projectRec]);
+  //const persistedSegmentsP2 = React.useMemo(() => projectRec?.meta?.segmentsP2 || [], [projectRec]);
+  // ✅ FIXED: Safely ensure we ALWAYS get an array, even if the DB gets corrupted during testing
+  const persistedSegmentsP2 = React.useMemo(() => {
+    const data = projectRec?.meta?.segmentsP2;
+    return Array.isArray(data) ? data : [];
+  }, [projectRec]);
   const persistedSegmentsP1 = React.useMemo(() => projectRec?.meta?.segmentsP1 || [], [projectRec]);
 
   const [isEditingTranslation, setIsEditingTranslation] = useState(false);
@@ -818,7 +946,7 @@ useEffect(() => {
   /** Language passed from previous page */
   //const inboundLang = state?.lang ?? "EN";
 
-  const gotoPhase = usePhaseNavigation(projectId, projectName);
+  const gotoPhase = usePhaseNavigation(projectId, projectName,country); //31_03_sanju
 
   /** Normalize incoming segments */
   // const segments = useMemo(() => {
@@ -1013,43 +1141,113 @@ const rawCandidate =
 const [isDraftUnlocked, setIsDraftUnlocked] = useState(false);
 
 /** Are ALL segments completed (has real text or explicit status=Completed)? */
+// const allSegmentsCompleted = useMemo(() => {
+//   if (segments.length === 0) return false;
+//   return segments.every((s) => {
+//     const o = segOverrides[s.id];
+//     const translated = (o?.translated ?? s.translated ?? "").trim();
+//     const status = (o?.status ?? s.status) || (translated ? "Completed" : "Pending");
+//     // treat only real (non-placeholder) translations as completed
+//     return (translated.length > 0 && translated !== "— Awaiting translation —") || status === "Completed";
+//   });
+// }, [segments, segOverrides]);
+//  NEW: Auto-Unlock the Draft Tab ONLY when translations are 100% complete
+  //Hari
+ /** Are ALL segments completed (has real text or explicit status=Completed)? */
+ //Hari
 const allSegmentsCompleted = useMemo(() => {
   if (segments.length === 0) return false;
   return segments.every((s) => {
     const o = segOverrides[s.id];
     const translated = (o?.translated ?? s.translated ?? "").trim();
     const status = (o?.status ?? s.status) || (translated ? "Completed" : "Pending");
+    
+    // ✅ FIXED: Explicitly ignore ALL loading and error placeholders
+    const isPlaceholder = 
+      translated === "— Awaiting translation —" || 
+      translated === "— Analyzing TM & Glossary —" || 
+      translated === "— Failed —";
+
     // treat only real (non-placeholder) translations as completed
-    return (translated.length > 0 && translated !== "— Awaiting translation —") || status === "Completed";
+    return (translated.length > 0 && !isPlaceholder) || status === "Completed";
   });
 }, [segments, segOverrides]);
-// ✅ NEW: Auto-Unlock the Draft Tab ONLY when translations are 100% complete
   useEffect(() => {
     if (!allSegmentsCompleted) {
+      // If a translation is deleted, strictly lock the tab
       setIsDraftUnlocked(false);
-    //} else {
-      //setIsDraftUnlocked(false);
-      // If the user deletes a translation while viewing the draft, kick them back to the workspace
       if (activeTab === "draft") {
         setActiveTab("workspace");
       }
+    } else if (draftGeneratedPersisted) {
+      // If complete AND we already generated the draft in the past, keep it unlocked!
+      setIsDraftUnlocked(true);
     }
-  }, [allSegmentsCompleted, activeTab]);
+  }, [allSegmentsCompleted, activeTab, draftGeneratedPersisted]);
 
 /** Show success banner only when all complete AND draft is still locked */
-// useEffect(() => {
-//     const canShow = allSegmentsCompleted && !isDraftUnlocked && !draftGeneratedPersisted;
-//     setShowGenerateDraft(canShow);
-//   }, [allSegmentsCompleted, isDraftUnlocked, draftGeneratedPersisted]);
+//Hari
 useEffect(() => {
-    setShowGenerateDraft(allSegmentsCompleted && !isDraftUnlocked);
-  }, [allSegmentsCompleted, isDraftUnlocked]);
+     const canShow = allSegmentsCompleted && !isDraftUnlocked && !draftGeneratedPersisted;
+     setShowGenerateDraft(canShow);
+   }, [allSegmentsCompleted, isDraftUnlocked, draftGeneratedPersisted]);
+// useEffect(() => {
+//     setShowGenerateDraft(allSegmentsCompleted && !isDraftUnlocked);
+//   }, [allSegmentsCompleted, isDraftUnlocked]);
 
   /** Draft state for same-page tab */
   const [draftSegments, setDraftSegments] = useState([]);
   const [tmLeveragePct, setTmLeveragePct] = useState(0);
 
   // 🆕 NEW: Auto-calculate using the EXACT logic from TMLeverageOverview.jsx
+  // useEffect(() => {
+  //   // 1. Merge segments with user overrides so we have the latest text/scores
+  //   const mergedSegments = segments.map((s) => {
+  //     const o = segOverrides[s.id] || {};
+  //     return { ...s, ...o };
+  //   });
+
+  //   if (mergedSegments.length === 0) return;
+
+  //   // 2. Use the exact variables from TMLeverageOverview
+  //   let exact = 0;
+  //   let fuzzy = 0;
+    
+  //   mergedSegments.forEach((seg) => {
+  //     let rawScore = 0;
+
+  //     // Exact logic from TMLeverageOverview Case A, B, and C
+  //     if (typeof seg.matchScore === 'number') {
+  //         rawScore = seg.matchScore;
+  //     } else if (seg.reviewData && typeof seg.reviewData.tmScore === 'number') {
+  //         rawScore = seg.reviewData.tmScore <= 1 
+  //           ? seg.reviewData.tmScore * 100 
+  //           : seg.reviewData.tmScore;
+  //     } else if (seg.translated && seg.translated.trim() !== "" && seg.translated.trim() !== "— Awaiting translation —") {
+  //         rawScore = 100;
+  //     }
+
+  //     const score = Math.round(rawScore);
+
+  //     // Exact Classification Logic
+  //     if (score >= 95) {
+  //         exact++;      // Tier 1: Exact Match
+  //     } else if (score >= 70) {
+  //         fuzzy++;      // Tier 2: Fuzzy / Context Match
+  //     }
+  //   });
+
+  //   const total = mergedSegments.length;
+    
+  //   // Exact Leverage Rate formula
+  //   const leverageRate = total > 0 ? Math.round(((exact + fuzzy) / total) * 100) : 0;
+
+  //   // 3. Set the state so the Draft Panel receives it
+  //   setTmLeveragePct(leverageRate);
+  // }, [segments, segOverrides]);
+
+  // FIXED: Auto-calculate using the EXACT Average Logic from TMLeverageOverview
+  //Hari
   useEffect(() => {
     // 1. Merge segments with user overrides so we have the latest text/scores
     const mergedSegments = segments.map((s) => {
@@ -1057,16 +1255,17 @@ useEffect(() => {
       return { ...s, ...o };
     });
 
-    if (mergedSegments.length === 0) return;
+    if (mergedSegments.length === 0) {
+      setTmLeveragePct(0);
+      return;
+    }
 
-    // 2. Use the exact variables from TMLeverageOverview
-    let exact = 0;
-    let fuzzy = 0;
+    // 2. Sum up the scores exactly as TMLeverageOverview does
+    let totalScore = 0;
     
     mergedSegments.forEach((seg) => {
       let rawScore = 0;
 
-      // Exact logic from TMLeverageOverview Case A, B, and C
       if (typeof seg.matchScore === 'number') {
           rawScore = seg.matchScore;
       } else if (seg.reviewData && typeof seg.reviewData.tmScore === 'number') {
@@ -1077,23 +1276,12 @@ useEffect(() => {
           rawScore = 100;
       }
 
-      const score = Math.round(rawScore);
-
-      // Exact Classification Logic
-      if (score >= 95) {
-          exact++;      // Tier 1: Exact Match
-      } else if (score >= 70) {
-          fuzzy++;      // Tier 2: Fuzzy / Context Match
-      }
+      totalScore += Math.round(rawScore);
     });
 
-    const total = mergedSegments.length;
-    
-    // Exact Leverage Rate formula
-    const leverageRate = total > 0 ? Math.round(((exact + fuzzy) / total) * 100) : 0;
-
-    // 3. Set the state so the Draft Panel receives it
-    setTmLeveragePct(leverageRate);
+    // 3. Calculate the true Average and set it
+    const avg = Math.round(totalScore / mergedSegments.length);
+    setTmLeveragePct(avg);
   }, [segments, segOverrides]);
 
 
@@ -1197,42 +1385,83 @@ useEffect(() => {
   /** Complete Phase → go to Cultural Adaptation (preserving translated text) */
   /** Complete Phase → go to Cultural Adaptation (preserving translated text) */
   //Hari
-  const handleCompletePhase = async()=> {
+  // const handleCompletePhase = async()=> {
+  //   if (!allSegmentsCompleted) {
+  //     alert("Please translate all segments before completing this phase.");
+  //     return;
+  //   }
+    
+  //   const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides).map(s => ({
+  //     ...s,
+  //     tmStatus: (s.translated?.trim() ? "Completed" : "Pending"),
+  //     ciStatus: "Pending", // always start P3 as pending
+  //   }));
+
+  //   // ✅ Persist P2 outputs for downstream resume AND seed P3
+  //   //Hari
+  //   await updateProjectMeta(projectId, { 
+  //     segmentsP2: mergedSegments,
+  //     //segmentsP3: mergedSegments // 🆕 SEED PHASE 3 SO IT HAS DATA IMMEDIATELY
+  //   });
+
+  //   const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
+  //   console.log('DB meta.segmentsP2', db[projectId]?.meta?.segmentsP2);
+   
+  //   await updateProjectMeta(projectId, { segmentsP2: mergedSegments });
+  //   await markPhaseComplete(projectId, 'P2');     
+  //   navigate("/culturalAdaptationWorkspace", {
+  //     state: {
+  //       projectId,
+  //       projectName,
+  //       segments: mergedSegments, // ✅ entire segments list, with translated content included
+  //       // 🆕 propagate lang
+  //       lang: inboundLang,
+  //     },
+  //   });
+  // };
+
+  //Hari
+  const handleCompletePhase = async () => {
     if (!allSegmentsCompleted) {
       alert("Please translate all segments before completing this phase.");
       return;
     }
-    
+   
     const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides).map(s => ({
       ...s,
       tmStatus: (s.translated?.trim() ? "Completed" : "Pending"),
       ciStatus: "Pending", // always start P3 as pending
     }));
-
-    // ✅ Persist P2 outputs for downstream resume AND seed P3
-    //Hari
-    await updateProjectMeta(projectId, { 
+ 
+    // 1. Persist P2 outputs
+    await updateProjectMeta(projectId, {
       segmentsP2: mergedSegments,
-      //segmentsP3: mergedSegments // 🆕 SEED PHASE 3 SO IT HAS DATA IMMEDIATELY
     });
-
+ 
+    // 2. Mark Phase Complete (Updates storage and dispatches event)
+    await markPhaseComplete(projectId, 'P2');
+ 
+    // ✅ FIX: Micro-delay to ensure the Sidebar receives the "50%" update event
+    // before the navigation clears the current component state.
+    await new Promise(resolve => setTimeout(resolve, 50));
+ 
     const db = JSON.parse(localStorage.getItem('glocal_progress_v1') || '{}');
-    console.log('DB meta.segmentsP2', db[projectId]?.meta?.segmentsP2);
+    console.log('DB meta.segmentsP2 after markPhaseComplete:', db[projectId]?.meta?.segmentsP2);
    
-    await updateProjectMeta(projectId, { segmentsP2: mergedSegments });
-    await markPhaseComplete(projectId, 'P2');     
+    // 3. Navigate to Phase 3
     navigate("/culturalAdaptationWorkspace", {
       state: {
         projectId,
         projectName,
-        segments: mergedSegments, // ✅ entire segments list, with translated content included
-        // 🆕 propagate lang
+        segments: mergedSegments,
         lang: inboundLang,
+        forceRefresh: true, // Hint for the next page to fetch fresh data
         country
       },
     });
   };
-
+ 
+ 
 
   // /** Single segment translate (kept, via single endpoint if you need it) */
   // const handleAiTranslate = async () => {
@@ -1296,6 +1525,13 @@ useEffect(() => {
     // 2. UI Feedback: "Thinking..."
     setIsTranslating(true);
     setTranslationError(null);
+
+    
+    //Hari - ADD THESE 3 LINES HERE AS WELL
+    setIsDraftUnlocked(false);
+    localStorage.removeItem(`p2_draft_generated_${projectId}`);
+    try { updateProjectMeta(projectId, { p2DraftGenerated: false }); } catch(e) {}
+
     setSegOverrides((prev) => ({
       ...prev,
       [selected.id]: {
@@ -1431,6 +1667,37 @@ useEffect(() => {
           );
         }
 
+        // // B. Prepare Data for Analysis Page
+        // const formattedGlossary = {};
+        // if (Array.isArray(decision.glossary)) {
+        //   decision.glossary.forEach((item) => {
+        //     formattedGlossary[item.term] = item.translation;
+        //   });
+        // }
+
+        // // C. Update UI
+        // setSegOverrides((prev) => ({
+        //   ...prev,
+        //   [selected.id]: {
+        //     ...prev[selected.id],
+        //     translated: finalTranslation,
+        //     status: statusLabel,
+        //     // Important: Store data for the Analysis Page
+        //     reviewData: {
+        //       tmScore: decision.score,
+        //       glossaryUsed: formattedGlossary,
+        //       maskedSource: selected.source,
+        //     },
+        //   },
+        // }));
+
+        // // D. Update Badge
+        // if (typeof setTmMatchInfo === "function") {
+        //   setTmMatchInfo((prev) => ({
+        //     ...prev,
+        //     [selected.id]: matchBadgeValue,
+        //   }));
+        // }
         // B. Prepare Data for Analysis Page
         const formattedGlossary = {};
         if (Array.isArray(decision.glossary)) {
@@ -1439,19 +1706,45 @@ useEffect(() => {
           });
         }
 
-        // C. Update UI
+        // ✅ 1. CREATE the updated data object for this specific segment
+        const newSegmentData = {
+          translated: finalTranslation,
+          status: statusLabel,
+          reviewData: {
+            tmScore: decision.score,
+            glossaryUsed: formattedGlossary,
+            maskedSource: selected.source,
+          },
+        };
+
+        // ✅ 2. AWAIT the project database save FIRST to strictly prevent the race condition!
+        // const updatedOverrides = {
+        //   ...segOverrides,
+        //   [selected.id]: {
+        //     ...(segOverrides[selected.id] || {}),
+        //     ...newSegmentData
+        //   }
+        // };
+        // await updateProjectMeta(projectId, { segmentsP2: updatedOverrides });
+        // ✅ 2. AWAIT the project database save FIRST to strictly prevent the race condition!
+        const updatedOverrides = {
+          ...segOverrides,
+          [selected.id]: {
+            ...(segOverrides[selected.id] || {}),
+            ...newSegmentData
+          }
+        };
+        
+        // ✅ FIXED: Convert the overrides dictionary back into an Array before saving!
+        const mergedSegmentsToSave = mergeSegmentsWithOverrides(segments, updatedOverrides);
+        await updateProjectMeta(projectId, { segmentsP2: mergedSegmentsToSave });
+
+        // ✅ 3. THEN update the UI (This safely triggers the banner only AFTER the DB is secure)
         setSegOverrides((prev) => ({
           ...prev,
           [selected.id]: {
             ...prev[selected.id],
-            translated: finalTranslation,
-            status: statusLabel,
-            // Important: Store data for the Analysis Page
-            reviewData: {
-              tmScore: decision.score,
-              glossaryUsed: formattedGlossary,
-              maskedSource: selected.source,
-            },
+            ...newSegmentData
           },
         }));
 
@@ -1481,7 +1774,7 @@ useEffect(() => {
 
   /** Helper: translate one segment via n8n (single endpoint) */
   async function translateOneSegment(seg) {
-    const targetLang = getTargetLang(therapyArea);
+    const targetLang = inboundLang;
 
     const payload = {
       segmentId: seg.id,
@@ -1530,119 +1823,332 @@ useEffect(() => {
   };
 
   /** Bulk: send all pending segments in ONE request — and then auto-prep Draft tab */
+//   const handleTranslateAllClick = async () => {
+//     if (!N8N_BULK_WEBHOOK_URL) {
+//       setTranslationError("N8N_BULK_WEBHOOK_URL is not configured.");
+//       return;
+//     }
+
+//     const pending = segments.filter((s) => {
+//       const o = segOverrides[s.id];
+//       const mergedTranslated = (o?.translated ?? s.translated ?? "").trim();
+//       const mergedStatus = o?.status ?? s.status;
+//       return !(mergedTranslated.length > 0 || mergedStatus === "Completed");
+//     });
+
+//     if (pending.length === 0) {
+//       // Already translated → show draft tab (hide banner on draft)
+//       // const mergedSegmentsNow = mergeSegmentsWithOverrides(segments, segOverrides);
+//       // setDraftSegments(mergedSegmentsNow);
+//       // setTmLeveragePct(0);
+//       // setDraftPrepared(true);
+//       // setActiveTab("draft");
+//       // setShowGenerateDraft(false); 
+//       setShowGenerateDraft(allSegmentsCompleted && !isDraftUnlocked);
+//       return;
+//     }
+
+//     // Show placeholders for pending segments while bulk call runs
+//     setSegOverrides((prev) => {
+//       const next = { ...prev };
+//       for (const s of pending) {
+//         next[s.id] = {
+//           ...next[s.id],
+//           translated: "— Awaiting translation —",
+//           status: "Pending",
+//         };
+//       }
+//       return next;
+//     });
+
+//     setBulkProgress({ done: 0, total: pending.length, failed: 0 });
+//     setShowGenerateDraft(false);
+//     setIsBulkTranslating(true);
+//     setTranslationError(null);
+
+//     //Hari
+//     setIsDraftUnlocked(false);
+//     localStorage.removeItem(`p2_draft_generated_${projectId}`);
+//     try { updateProjectMeta(projectId, { p2DraftGenerated: false }); } catch(e) {}
+
+//     try {
+//       const targetLang = getTargetLang(therapyArea);
+
+//       const payload = {
+//         projectName,
+//         sourceLang: "EN",
+//         targetLang,
+//         inboundLang,
+//         tmLeverageOn,
+//         therapyArea,
+//         segments: pending.map((s) => ({
+//           segmentId: s.id,
+//           index: s.index,
+//           source: s.source,
+//           words: s.words,
+//         })),
+//       };
+
+//       const res = await fetch(N8N_BULK_WEBHOOK_URL, {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//           ...(N8N_AUTH ? { Authorization: N8N_AUTH } : {}),
+//         },
+//         body: JSON.stringify(payload),
+//       });
+
+//       if (!res.ok) {
+//         const txt = await res.text();
+//         throw new Error(`Bulk n8n responded with ${res.status}: ${txt}`);
+//       }
+
+//       // Parse translations from bulk response (handles your screenshot shape)
+//       const byKey = await extractBulkTranslations(res, pending);
+
+//       // Apply overrides from returned items
+//       let translatedCount = 0;
+//       //const locallyMergedOverrides = { ...segOverrides };
+//       const updates ={};
+
+//       for (const s of pending) {
+//         const candidates = keyVariantsForSegment(s);
+//         const translatedRaw = candidates
+//           .map((k) => byKey[k])
+//           .find((v) => typeof v === "string" && v.trim().length > 0);
+
+//         const translated = (translatedRaw || "").trim();
+
+//         if (translated) {
+//           translatedCount += 1;
+//           // locallyMergedOverrides[s.id] = {
+//           //   ...(locallyMergedOverrides[s.id] || {}),
+//           //   translated,
+//           //   status: "Completed",
+//           // };
+//           updates[s.id] = {
+//             translated, status : "Completed", 
+//             reviewData : {tmScore:1}
+//           };
+//         } else {
+//           // locallyMergedOverrides[s.id] = {
+//           //   ...(locallyMergedOverrides[s.id] || {}),
+//           //   status: "Pending",
+//           // };
+//           updates[s.id] ={
+//             status : "Pending",
+//           };
+//         }
+//       }
+
+//       setSegOverrides((prev) => {
+//         const next = { ...prev };
+//         for (const [id, data] of Object.entries(updates)) {
+//           next[id] = { ...(next[id] || {}), ...data };
+//         }
+//         return next;
+//       });
+
+//       // setBulkProgress({
+//       //   done: translatedCount,
+//       //   total: pending.length,
+//       //   failed: Math.max(pending.length - translatedCount, 0),
+//       // });
+
+//       // Prepare and switch to 'draft' tab with merged segments (hide banner)
+//       // const mergedSegmentsFinal = mergeSegmentsWithOverrides(segments, locallyMergedOverrides);
+//       // setDraftSegments(mergedSegmentsFinal);
+//       // setTmLeveragePct(0);
+//       // setDraftPrepared(true);
+//       // setActiveTab("draft");
+//       // setShowGenerateDraft(false); 
+      
+// // Do NOT auto-switch to Draft; just show the "Generate Draft Translation" banner
+// setShowGenerateDraft(true);
+
+//     } catch (err) {
+//       setTranslationError(err.message || "Bulk translation failed.");
+//       setBulkProgress((bp) => ({ ...bp, failed: bp.total - bp.done }));
+//     } finally {
+//       setIsBulkTranslating(false);
+//     }
+//   };
+    /** Bulk: send all pending segments to TM Brain, then to AI, and auto-prep Draft tab */
   const handleTranslateAllClick = async () => {
+    // 1. Validation
     if (!N8N_BULK_WEBHOOK_URL) {
       setTranslationError("N8N_BULK_WEBHOOK_URL is not configured.");
       return;
     }
 
-    const pending = segments.filter((s) => {
+    // Filter segments that actually need work 
+    const pendingSegments = segments.filter((s) => {
       const o = segOverrides[s.id];
       const mergedTranslated = (o?.translated ?? s.translated ?? "").trim();
       const mergedStatus = o?.status ?? s.status;
       return !(mergedTranslated.length > 0 || mergedStatus === "Completed");
     });
 
-    if (pending.length === 0) {
-      // Already translated → show draft tab (hide banner on draft)
-      // const mergedSegmentsNow = mergeSegmentsWithOverrides(segments, segOverrides);
-      // setDraftSegments(mergedSegmentsNow);
-      // setTmLeveragePct(0);
-      // setDraftPrepared(true);
-      // setActiveTab("draft");
-      // setShowGenerateDraft(false); 
+    if (pendingSegments.length === 0) {
+      // ✅ FIXED: Show banner instead of auto-navigating to draft
       setShowGenerateDraft(allSegmentsCompleted && !isDraftUnlocked);
       return;
     }
 
-    // Show placeholders for pending segments while bulk call runs
+    // 2. UI Setup & Safety Locks
+    setIsBulkTranslating(true);
+    setTranslationError(null);
+    setBulkProgress({ done: 0, total: pendingSegments.length, failed: 0 });
+    setShowGenerateDraft(false);
+
+    // ✅ FIXED: Lock the Draft Tab securely while processing
+    setIsDraftUnlocked(false);
+    localStorage.removeItem(`p2_draft_generated_${projectId}`);
+    try { updateProjectMeta(projectId, { p2DraftGenerated: false }); } catch(e) {}
+
+    // ✅ FIXED: Set safe placeholders so the progress bar doesn't falsely complete
     setSegOverrides((prev) => {
       const next = { ...prev };
-      for (const s of pending) {
+      for (const s of pendingSegments) {
         next[s.id] = {
           ...next[s.id],
-          translated: "— Awaiting translation —",
+          translated: "— Analyzing TM & Glossary —",
           status: "Pending",
         };
       }
       return next;
     });
 
-    setBulkProgress({ done: 0, total: pending.length, failed: 0 });
-    setShowGenerateDraft(false);
-    setIsBulkTranslating(true);
-    setTranslationError(null);
-
     try {
-      const targetLang = getTargetLang(therapyArea);
-
-      const payload = {
-        projectName,
-        sourceLang: "EN",
-        targetLang,
-        inboundLang,
-        tmLeverageOn,
-        therapyArea,
-        segments: pending.map((s) => ({
-          segmentId: s.id,
-          index: s.index,
-          source: s.source,
-          words: s.words,
-        })),
-      };
-
-      const res = await fetch(N8N_BULK_WEBHOOK_URL, {
+      // ---------------------------------------------------------
+      // STEP 1: BULK SMART LOOKUP (Check Python Brain)
+      // ---------------------------------------------------------
+      console.log("🧠 Checking TM for all segments...");
+      
+      const lookupRes = await fetch("http://127.0.0.1:8000/api/smart-tm-lookup-bulk", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(N8N_AUTH ? { Authorization: N8N_AUTH } : {}),
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source_texts: pendingSegments.map(s => s.source),
+          target_lang: inboundLang
+        })
       });
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Bulk n8n responded with ${res.status}: ${txt}`);
-      }
+      const decisions = await lookupRes.json(); // Array of { action, score, translation... }
 
-      // Parse translations from bulk response (handles your screenshot shape)
-      const byKey = await extractBulkTranslations(res, pending);
+      // ---------------------------------------------------------
+      // STEP 2: SORT & APPLY EXACT MATCHES
+      // ---------------------------------------------------------
+      const segmentsToGenerate = [];
+      const updates = {};
+      let completedCount = 0;
 
-      // Apply overrides from returned items
-      let translatedCount = 0;
-      //const locallyMergedOverrides = { ...segOverrides };
-      const updates ={};
+      pendingSegments.forEach((seg, index) => {
+        const decision = decisions[index];
 
-      for (const s of pending) {
-        const candidates = keyVariantsForSegment(s);
-        const translatedRaw = candidates
-          .map((k) => byKey[k])
-          .find((v) => typeof v === "string" && v.trim().length > 0);
-
-        const translated = (translatedRaw || "").trim();
-
-        if (translated) {
-          translatedCount += 1;
-          // locallyMergedOverrides[s.id] = {
-          //   ...(locallyMergedOverrides[s.id] || {}),
-          //   translated,
-          //   status: "Completed",
-          // };
-          updates[s.id] = {
-            translated, status : "Completed", 
-            reviewData : {tmScore:1}
+        if (decision && decision.action === "reuse") {
+          // TIER 1: Exact Match from DB -> Apply immediately!
+          console.log(`♻️ Reusing exact match for Seg ${seg.index}`);
+          updates[seg.id] = {
+            translated: decision.translation,
+            status: "Completed",
+            reviewData: { tmScore: decision.score } // ✅ Properly assigns the TM Score!
           };
+          completedCount++;
         } else {
-          // locallyMergedOverrides[s.id] = {
-          //   ...(locallyMergedOverrides[s.id] || {}),
-          //   status: "Pending",
-          // };
-          updates[s.id] ={
-            status : "Pending",
-          };
+          // TIER 2 & 3: Needs AI Generation via N8N
+          segmentsToGenerate.push({
+            id: seg.id,
+            segmentId: seg.id,
+            index: seg.index,
+            source: seg.source,
+            words: seg.words,
+            fuzzyContext: decision?.context_target, 
+            glossary: decision?.glossary || []
+          });
+        }
+      });
+      
+      // Update UI with exact matches immediately
+      setSegOverrides(prev => {
+        const next = { ...prev };
+        for (const [id, data] of Object.entries(updates)) next[id] = { ...next[id], ...data };
+        return next;
+      });
+      setBulkProgress({ done: completedCount, total: pendingSegments.length, failed: 0 });
+
+      // ---------------------------------------------------------
+      // STEP 3: BATCH CALL TO N8N (Only for the remaining ones)
+      // ---------------------------------------------------------
+      if (segmentsToGenerate.length > 0) {
+        console.log(`🤖 Sending ${segmentsToGenerate.length} segments to AI...`);
+        
+        // Update placeholders to show AI is working
+        setSegOverrides((prev) => {
+          const next = { ...prev };
+          for (const s of segmentsToGenerate) {
+            next[s.id] = { ...next[s.id], translated: "— Awaiting translation —" };
+          }
+          return next;
+        });
+        
+        const payload = {
+          projectName,
+          sourceLang: "English",
+          targetLang: inboundLang,
+          therapyArea: `Respiratory · ${inboundLang}`,
+          tmLeverageOn,
+          // We map the segments to include context hints right in the prompt
+          segments: segmentsToGenerate.map(s => ({
+             segmentId: s.segmentId,
+             index: s.index,
+             source: s.fuzzyContext 
+               ? `[Context: Similar previous translation was "${s.fuzzyContext}"] ${s.source}` 
+               : s.source,
+             words: s.words
+          })),
+          glossaryHints: segmentsToGenerate.flatMap(s => s.glossary)
+        };
+
+        const n8nRes = await fetch(N8N_BULK_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(N8N_AUTH ? { Authorization: N8N_AUTH } : {}),
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!n8nRes.ok) throw new Error("AI Generation failed");
+
+        // ✅ KEY FIX: Use your existing, bulletproof extraction logic
+        const byKey = await extractBulkTranslations(n8nRes, segmentsToGenerate);
+        
+        // Merge AI results into updates
+        for (const s of segmentsToGenerate) {
+          const candidates = keyVariantsForSegment(s);
+          const translatedRaw = candidates
+            .map((k) => byKey[k])
+            .find((v) => typeof v === "string" && v.trim().length > 0);
+
+          const translated = (translatedRaw || "").trim();
+
+          if (translated) {
+            updates[s.id] = {
+              translated,
+              status: "Completed",
+              reviewData: { tmScore: 0 } // ✅ Explicitly marks AI generations as 0% TM Match!
+            };
+            completedCount++;
+          } else {
+            updates[s.id] = { status: "Pending" };
+          }
         }
       }
 
+      // ---------------------------------------------------------
+      // STEP 4: FINAL UI UPDATE & SAVE
+      // ---------------------------------------------------------
       setSegOverrides((prev) => {
         const next = { ...prev };
         for (const [id, data] of Object.entries(updates)) {
@@ -1650,32 +2156,47 @@ useEffect(() => {
         }
         return next;
       });
-
-      // setBulkProgress({
-      //   done: translatedCount,
-      //   total: pending.length,
-      //   failed: Math.max(pending.length - translatedCount, 0),
-      // });
-
-      // Prepare and switch to 'draft' tab with merged segments (hide banner)
-      // const mergedSegmentsFinal = mergeSegmentsWithOverrides(segments, locallyMergedOverrides);
-      // setDraftSegments(mergedSegmentsFinal);
-      // setTmLeveragePct(0);
-      // setDraftPrepared(true);
-      // setActiveTab("draft");
-      // setShowGenerateDraft(false); 
       
-// Do NOT auto-switch to Draft; just show the "Generate Draft Translation" banner
-setShowGenerateDraft(true);
+      setBulkProgress({ done: completedCount, total: pendingSegments.length, failed: pendingSegments.length - completedCount });
+
+      console.log("💾 Saving all new translations to DB...");
+      
+      // Save newly generated AI translations to DB
+      const itemsToSave = segmentsToGenerate.map(s => {
+        const finalTrans = updates[s.id]?.translated;
+        if (finalTrans) {
+            return {
+                document_name: projectName,
+                source_text: s.source,
+                target_text: finalTrans,
+                source_language: "English",
+                target_language: inboundLang
+            };
+        }
+        return null;
+      }).filter(Boolean);
+
+      if (itemsToSave.length > 0) {
+        // Non-blocking DB save
+        fetch("http://127.0.0.1:8000/api/translated-content/bulk", {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({ items: itemsToSave })
+        }).catch(err => console.warn("Background DB save failed", err));
+      }
+      
+      // ✅ FIXED: Show the Generate Draft Banner (Instead of Auto-Navigating)
+      setTimeout(() => {
+          setIsBulkTranslating(false);
+          setShowGenerateDraft(true); 
+      }, 500);
 
     } catch (err) {
-      setTranslationError(err.message || "Bulk translation failed.");
-      setBulkProgress((bp) => ({ ...bp, failed: bp.total - bp.done }));
-    } finally {
+      console.error(err);
+      setTranslationError("Bulk processing failed: " + err.message);
       setIsBulkTranslating(false);
     }
   };
-
   /** Generate Draft Translation → switch to Draft tab on the same page (hide banner) */
   // const handleGenerateDraftTranslation = () => {
   //   const mergedSegments = mergeSegmentsWithOverrides(segments, segOverrides);
@@ -1724,34 +2245,85 @@ const handleGenerateDraftTranslation = () => {
   // };
   /** Send to CI (from Draft panel) */
   //Hari - 24/3
-  const handleSendToCI = async (normalizedDraftSegments) => {
+  // const handleSendToCI = async (normalizedDraftSegments) => {
     
-    // Persist P2 + "draft generated" flag before leaving
-    // try {
-    //   updateProjectMeta(projectId, {
-    //     segmentsP2: normalizedDraftSegments,
-    //     p2DraftGenerated: true,
-    //     p2DraftGeneratedAt: new Date().toISOString(),
-    //   });
-    // } catch (e) {
-    //   console.warn('Failed to persist segmentsP2 before sending to CI', e);
-    // }
-    //Hari - 24/3
+  //   // Persist P2 + "draft generated" flag before leaving
+  //   // try {
+  //   //   updateProjectMeta(projectId, {
+  //   //     segmentsP2: normalizedDraftSegments,
+  //   //     p2DraftGenerated: true,
+  //   //     p2DraftGeneratedAt: new Date().toISOString(),
+  //   //   });
+  //   // } catch (e) {
+  //   //   console.warn('Failed to persist segmentsP2 before sending to CI', e);
+  //   // }
+  //   //Hari - 24/3
+  //   await setP2DraftGenerated(projectId, true, { segmentsP2: normalizedDraftSegments });
+  //   localStorage.setItem(`p2_draft_generated_${projectId}`, "true");
+  //   await markPhaseComplete(projectId, 'P2');    
+  //     navigate("/culturalAdaptationWorkspace", {
+  //       state: {
+  //         projectId,
+  //         projectName,
+  //         segments: normalizedDraftSegments,
+  //         lang: inboundLang,
+  //         therapyArea,
+  //         fromDraft: true, // optional: for any additional UX control on CI
+  //       },
+  //     });
+  //   };
+
+  //Hari-25/3
+  const handleSendToCI = async (normalizedDraftSegments) => {
+
+    // 1. Persist P2 and the draft flag (Updates metadata)
+
+    // This helper from progressStore.js already calls updateProjectMeta
+
     await setP2DraftGenerated(projectId, true, { segmentsP2: normalizedDraftSegments });
+
+    // 2. Local fallback flag
+
     localStorage.setItem(`p2_draft_generated_${projectId}`, "true");
-    await markPhaseComplete(projectId, 'P2');    
-      navigate("/culturalAdaptationWorkspace", {
-        state: {
-          projectId,
-          projectName,
-          segments: normalizedDraftSegments,
-          lang: inboundLang,
-          therapyArea,
-          country,
-          fromDraft: true, // optional: for any additional UX control on CI
-        },
-      });
-    };
+
+    // 3. Mark Phase Complete (Updates storage and dispatches 'glocal_progress_updated')
+
+    await markPhaseComplete(projectId, 'P2');
+ 
+    // ✅ FIX: Micro-delay to ensure the Sidebar and Progress logic 
+
+    // "catch" the P2 completion event before the current page unmounts.
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+ 
+    // 4. Navigate to Cultural Intelligence
+
+    navigate("/culturalAdaptationWorkspace", {
+
+      state: {
+
+        projectId,
+
+        projectName,
+
+        segments: normalizedDraftSegments,
+
+        lang: inboundLang,
+
+        therapyArea,
+
+        country,
+
+        fromDraft: true,
+
+        forceRefresh: true // Hint for the next page to fetch fresh data
+
+      },
+
+    });
+
+  };
+ 
 
   return (
     <div className={`tm-app ${isFocusMode ? 'is-focus' : ''}`} data-page="tm">
@@ -2022,7 +2594,7 @@ const handleGenerateDraftTranslation = () => {
   {isLoadingProject ? (
     <div className="tm-workspace-loading" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 0', color: '#6B7280' }}>
       <Loader2 size={32} className="animate-spin mb-4 text-emerald-600" />
-      <p>Syncing....</p>
+      <p>Syncing Data....</p>
     </div>
   ) : (
   <section className="tm-workspace">
