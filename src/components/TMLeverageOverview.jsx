@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { Database } from 'lucide-react'; //sanju_01_04
 // import "../App.css"; 
 // ensure you are importing the CSS where your styles are defined
 
@@ -116,7 +117,7 @@ const stats = useMemo(() => {
           <h2 className="tm-ov-title">TM Leverage Overview</h2>
           <p className="tm-ov-subtitle">Translation Memory analytics and optimization insights</p>
         </div>
-        <div className="tm-ov-header-right">
+        {/* <div className="tm-ov-header-right"> sanju_01_04
           <span className="tm-ov-label">Leverage: {stats.leverageRate}%</span>
           <div className="tm-progress-pill-bg">
             <div 
@@ -124,25 +125,27 @@ const stats = useMemo(() => {
               style={{ width: `${stats.leverageRate}%` }} 
             />
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Card 1: Leverage Overview & Stats */}
       <div className="tm-ov-card">
         <div className="tm-ov-card-header">
           <div className="tm-ov-icon-title">
-            <svg className="tm-ov-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            {/*sanju_01_04 <svg className="tm-ov-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <h3 className="tm-ov-h3">Breakdown</h3>
+            </svg> */}
+            <Database size={18} className="h-1 w-1 text-green-600" />
+ 
+            <h3 className="tm-ov-h3">TM Leverage Overview</h3>
           </div>
-          <p className="tm-ov-sub-text">Segment distribution by match type</p>
+          <p className="tm-ov-sub-text">Translation Memory Intelligence</p>
         </div>
 
         <div className="tm-ov-section">
           <div className="tm-ov-row-spread">
-            <span className="tm-ov-label-bold">Total Leverage</span>
+            <span className="tm-ov-label-bold"> Leverage Rate</span>
             <span className={`tm-ov-percent ${stats.leverageRate > 50 ? 'green' : 'orange'}`}>
               {stats.leverageRate}%
             </span>
@@ -197,12 +200,12 @@ const stats = useMemo(() => {
       <div className="tm-ov-card">
         <div className="tm-ov-card-header">
            <div className="tm-ov-icon-title">
-            <svg className="tm-ov-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            {/* sanju_01_04<svg className="tm-ov-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="19" y1="5" x2="5" y2="19"></line>
               <circle cx="6.5" cy="6.5" r="2.5"></circle>
               <circle cx="17.5" cy="17.5" r="2.5"></circle>
-            </svg>
-            <h3 className="tm-ov-h3">Avg Match %</h3>
+            </svg> */}
+            <h3 className="tm-ov-h3">Mean Percentage </h3>
           </div>
         </div>
         <div className="tm-ov-center-content">

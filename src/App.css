@@ -6769,7 +6769,7 @@ html, body, #root {
 .tm-overview-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 5px; /*sanju_01_04_2026*/
   padding: 8px 4px 40px 4px; /* Added bottom padding for scroll */
   max-width: 1200px;
   margin: 0 auto;
@@ -6787,12 +6787,12 @@ html, body, #root {
   font-size: 18px;
   font-weight: 600;
   color: #101828;
-  margin: 0 0 4px 0;
+  margin: 0 0 4px 10px; /* sanju_01_04 */
 }
 .tm-ov-subtitle {
   font-size: 13px;
   color: #667085;
-  margin: 0;
+   margin: 0 0 4px 10px; /* sanju_01_04 */
 }
 .tm-ov-header-right {
   display: flex;
@@ -6847,10 +6847,10 @@ html, body, #root {
   margin: 0;
 }
 .tm-ov-sub-text {
-  font-size: 12px;
+  font-size: 13px; /*sanju_01_04*/
   color: #667085;
   margin: 0;
-  margin-left: 28px; /* Align with text not icon */
+  margin-left: 2px; /* Align with text not icon sanju_01_04*/
 }
 
 /* Section: Leverage Rate */

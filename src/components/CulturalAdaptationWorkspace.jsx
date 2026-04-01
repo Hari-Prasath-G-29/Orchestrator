@@ -203,13 +203,13 @@ console.log('Cultural: rec.meta.segmentsP2 length', rec?.meta?.segmentsP2?.lengt
   const N8N_CULTURAL_WEBHOOK_URL =
     ENV.REACT_APP_N8N_CULTURAL_WEBHOOK_URL ||
     ENV.VITE_N8N_CULTURAL_WEBHOOK_URL ||
-    "http://172.16.4.237:8016/webhook/cultural";
+    "http://172.16.4.237:8031/webhook/cultural";
 
   /** Batch webhook URL */
   const N8N_CULTURAL_BATCH_WEBHOOK_URL =
     ENV.REACT_APP_N8N_CULTURAL_BATCH_WEBHOOK_URL ||
     ENV.VITE_N8N_CULTURAL_BATCH_WEBHOOK_URL ||
-    "http://172.16.4.237:8016/webhook/culturalTranslateAll";
+    "http://172.16.4.237:8031/webhook/culturalTranslateAll";
 
   /** Token for n8n (optional) */
   const N8N_AUTH = ENV.REACT_APP_N8N_TOKEN || ENV.VITE_N8N_TOKEN || "";
@@ -2725,7 +2725,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
                 {/* //23_03_sanju  changed in button for pop up  */}
 <button
 
-  className="tm-btn outline small"
+  className="tm-btn outline small copyreport" //sanju_01_04
 
   onClick={() => {
 

@@ -391,6 +391,7 @@
     grid-auto-flow: column;    /* label, value, bar in one row */
     align-items: center;
     gap: 12px;
+    margin-right: 0 !important; /*sanju_01_04 */
   }
   
   .regulatory .tm-progress-inline-label {
@@ -1881,4 +1882,8 @@ font-size: 0.875rem;
 .rc-textarea[readonly] {
   background-color: #f9f9f9; /* Light gray to indicate it's locked */
   cursor: default;
+}
+/*sanju_01_04*/
+.regulatory .tm-actions-row{
+  margin-left: 27px;
 }

@@ -1441,3 +1441,10 @@
 }
 .cultural-page .tm-seg-pill.Pending { background: #fff7eb; color: #b45309; }
 .cultural-page .tm-seg-pill.Reviewed { background: #e8fff1; color: #166534; }
+
+/*sanju_01_04*/
+
+.cultural-page .copyreport{
+    margin-right: 10px !important;
+}
+ 
