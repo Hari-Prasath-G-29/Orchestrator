@@ -2698,9 +2698,8 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
       </div>
     </div>
 
-    {/* Avi commented Cultural Adaptation Summary 01/4/26 */}
     {/* Summary Panel (Collapsible placeholder) */}
-    {/*<div className="tm-draft-summary-card">
+    {/* <div className="tm-draft-summary-card">
       <h3 className="tm-card-title">Cultural Adaptation Summary</h3>
     </div> */}
   </div>
