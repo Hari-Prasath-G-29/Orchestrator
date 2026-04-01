@@ -2607,6 +2607,15 @@ export default function RegulatoryComplianceHub({
   }, [selected, segOverrides]);
 
   const currentSegOverride = segOverrides[selectedResolved?.id] || {};
+//sanju - 01_04 — extract decisionType and decisionGroup for the currently selected segment to manage locking and mutual exclusion
+  const decisionType  = currentSegOverride.decisionType;
+const decisionGroup = currentSegOverride.decisionGroup;
+
+// Lock when ANY decision is taken
+const isLocked = Boolean(decisionType);
+
+// Accept-vs-Accept mutual exclusion helper
+const isAcceptGroup = decisionGroup === "accept";
 
   const buildP4Segments = () =>
     segments.map((s) => {
@@ -3014,22 +3023,59 @@ export default function RegulatoryComplianceHub({
     }));
   };
 
-  /* ============ Analysis actions ============ */
+  //sanju_01_04
+  const textAlreadyApplied = (existingText = "", newText = "") => {
+  return existingText.includes(newText);
+};
+
+  /* ============ Analysis actions ============ sanju_01_04 */
   const applyCompliantSuggestion = (recText) => {
-    const appended =
-      (selectedResolved?.compliantText || "").trim().length > 0
-        ? selectedResolved.compliantText + "\n\n" + "• " + recText
-        : "• " + recText;
-    setCompliantEditorValue(appended);
-  };
+  if (!selectedResolved) return;
+
+  const existing = selectedResolved.compliantText || "";
+
+  // ✅ PREVENT DUPLICATE
+  if (textAlreadyApplied(existing, recText)) return;
+
+  const updated =
+    existing.trim().length > 0
+      ? existing + "\n\n• " + recText
+      : "• " + recText;
+
+  setSegOverrides((prev) => ({
+    ...prev,
+    [selectedResolved.id]: {
+      ...prev[selectedResolved.id],
+      compliantText: updated,
+      decisionType: "apply_change",
+      decisionGroup: "accept",
+    },
+  }));
+};
 
   const acceptRecommendation = (recText) => {
-    const appended =
-      (selectedResolved?.compliantText || "").trim().length > 0
-        ? selectedResolved.compliantText + "\n\n" + "• " + recText
-        : "• " + recText;
-    setCompliantEditorValue(appended);
-  };
+  if (!selectedResolved) return;
+
+  const existing = selectedResolved.compliantText || "";
+
+  // ✅ PREVENT DUPLICATE
+  if (textAlreadyApplied(existing, recText)) return;
+
+  const updated =
+    existing.trim().length > 0
+      ? existing + "\n\n• " + recText
+      : "• " + recText;
+
+  setSegOverrides((prev) => ({
+    ...prev,
+    [selectedResolved.id]: {
+      ...prev[selectedResolved.id],
+      compliantText: updated,
+      decisionType: "accept_reco",
+      decisionGroup: "accept",
+    },
+  }));
+};
 
   const reAnalyzeInModal = async () => {
     setIsReAnalyzing(true);
@@ -3113,6 +3159,8 @@ export default function RegulatoryComplianceHub({
         ...prev[selectedResolved.id],
         status: "Flagged",
         mlr: payload,
+        decisionType: "mlr", //sanju_01_04
+        decisionGroup: "other", //sanju_01_04
       },
     }));
 
@@ -3153,6 +3201,10 @@ export default function RegulatoryComplianceHub({
         ...prev[selectedResolved.id],
         status: "Flagged",
         mlrDefer: payload,
+        
+decisionType: "defer",      // sanju_01_04
+    decisionGroup: "other",  //sanju_01_04
+
       },
     }));
 
@@ -3192,6 +3244,10 @@ export default function RegulatoryComplianceHub({
       [selectedResolved.id]: {
         ...prev[selectedResolved.id],
         acceptedRisk: payload,
+        
+       decisionType: "risk",       // sanju_01_04
+       decisionGroup: "other", //sanju_01_04
+
       },
     }));
 
@@ -3234,6 +3290,9 @@ export default function RegulatoryComplianceHub({
         ...prev[selectedResolved.id],
         status: "Flagged",
         blocked: payload,
+       decisionType: "block",      // sanju_01_04
+       decisionGroup: "other", //sanju_01_04
+
       },
     }));
 
@@ -3853,15 +3912,31 @@ const finalCompliantText =
 
                     {!mlrMatch && (
                       <div className="rcm-issue__actions">
-                        <button className="btn success" onClick={() => applyCompliantSuggestion(it.text)}>
-                          ✓ Accept &amp; Apply Changes
-                        </button>
-                        <button className="btn outline" onClick={() => openMlrModal(it.text)}>
-                          ⓘ Request MLR Exception
-                        </button>
-                        <button className="btn danger" onClick={() => openBlockModal(it.text)}>
-                          ⛔ Mark as Blocking
-                        </button>
+                       <button
+  className="btn success"
+  disabled={isLocked && decisionType !== "apply_change"}
+  onClick={() => applyCompliantSuggestion(it.text)}
+>
+  ✓ Accept & Apply Changes
+</button>
+                       
+<button
+  className="btn outline"
+  disabled={isLocked}
+  onClick={() => openMlrModal(it.text)}
+>
+  ⓘ Request MLR Exception
+</button>
+
+                       
+<button
+  className="btn danger"
+  disabled={isLocked}
+  onClick={() => openBlockModal(it.text)}
+>
+  ⛔ Mark as Blocking
+</button>
+
                       </div>
                     )}
 
@@ -3958,21 +4033,31 @@ const finalCompliantText =
 
                       {!hasDecision && (
                         <div className="rcm-issue__actions">
-                          <button
-                            className="btn hollow-success"
-                            onClick={() => acceptRecommendation(it.text)}
-                          >
-                            ✓ Accept Recommendation
-                          </button>
-                          <button
-                            className="btn outline-blue"
-                            onClick={() => openDeferModal(it.text)}
-                          >
-                            ☐ Defer to MLR Review
-                          </button>
-                          <button className="btn ghost" onClick={() => openRiskModal(it.text)}>
-                            Accept Risk &amp; Skip
-                          </button>
+                         <button
+  className="btn hollow-success"
+  disabled={isLocked && decisionType !== "accept_reco"}
+  onClick={() => acceptRecommendation(it.text)}
+>
+  ✓ Accept Recommendation
+</button>
+                         
+<button
+  className="btn outline-blue"
+  disabled={isLocked}
+  onClick={() => openDeferModal(it.text)}
+>
+  ☐ Defer to MLR Review
+</button>
+
+                         
+<button
+  className="btn ghost"
+  disabled={isLocked}
+  onClick={() => openRiskModal(it.text)}
+>
+  Accept Risk & Skip
+</button>
+
                         </div>
                       )}
 
