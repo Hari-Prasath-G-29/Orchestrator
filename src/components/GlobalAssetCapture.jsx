@@ -650,7 +650,7 @@ const toggleAdditionalAudience = (aud) => {
       // ADDED: timestamp cache-buster and cache: 'no-store' to force a fresh DB check every time
       const timestamp = new Date().getTime();
       const dbResponse = await fetch(
-        `http://127.0.0.1:8000/api/segmented-content?t=${timestamp}`, 
+        `https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/segmented-content?t=${timestamp}`, 
         { cache: 'no-store' } 
       );
       if (!dbResponse.ok)
@@ -707,7 +707,7 @@ const toggleAdditionalAudience = (aud) => {
         // PROPER ERROR CHECKING: We will now see exact database errors if they happen
         const savePromises = segmentsToStore.map(async (seg) => {
           const saveRes = await fetch(
-            "http://127.0.0.1:8000/api/segmented-content",
+            "https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/segmented-content",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -934,57 +934,126 @@ const toggleAdditionalAudience = (aud) => {
   };  
  
   return (
-    <div className={`gac-page ${isFocusMode ? 'is-focus' : ''}`} data-page="gac">
-      {/* Sidebar */}
-      {/* Hari-24/3 */}
-      {!isFocusMode && (<aside className="gac-sidebar">
-        <div className="sidebar-header" style={{ opacity: isProgressLoading ? 0.6 : 1, transition: 'opacity 0.3s' }}>
-      <div className="progress-row">
-        <span className="progress-label">Overall Progress</span>
-        <span className="progress-value">{isProgressLoading ? "..." : `${overallPercent}%`}</span>
-      </div>
+  //   <div className={`gac-page ${isFocusMode ? 'is-focus' : ''}`} data-page="gac">
+  //     {/* Sidebar */}
+  //     {/* Hari-24/3 */}
+  //     {!isFocusMode && (<aside className="gac-sidebar">
+  //       <div className="sidebar-header" style={{ opacity: isProgressLoading ? 0.6 : 1, transition: 'opacity 0.3s' }}>
+  //     <div className="progress-row">
+  //       <span className="progress-label">Overall Progress</span>
+  //       <span className="progress-value">{isProgressLoading ? "..." : `${overallPercent}%`}</span>
+  //     </div>
      
-      <div className="progress-bar-bg" style={{ height: '4px', background: '#e0e0e0', borderRadius: '2px', margin: '8px 0' }}>
-        <div
-          className="progress-bar-fill"
-          style={{
-            width: `${overallPercent}%`,
-            height: '100%',
-            background: '#007bff', 
-            borderRadius: '2px',
-            transition: 'width 0.3s ease'
-          }}
-        />
-      </div>
+  //     <div className="progress-bar-bg" style={{ height: '4px', background: '#e0e0e0', borderRadius: '2px', margin: '8px 0' }}>
+  //       <div
+  //         className="progress-bar-fill"
+  //         style={{
+  //           width: `${overallPercent}%`,
+  //           height: '100%',
+  //           background: '#007bff', 
+  //           borderRadius: '2px',
+  //           transition: 'width 0.3s ease'
+  //         }}
+  //       />
+  //     </div>
  
-      <div className="progress-sub">
-        {isProgressLoading ? 'Loading...' : `${completedCount} of 4 phases completed`}
-      </div>
-    </div>
+  //     <div className="progress-sub">
+  //       {isProgressLoading ? 'Loading...' : `${completedCount} of 4 phases completed`}
+  //     </div>
+  //   </div>
  
-    <nav className="sidebar-phases">
-      {phases.map((p) => (
-        <button
-          key={p.id}
-          className={`phase-item ${p.status === "active" ? "is-active" : ""}`}
-          onClick={() => gotoPhase(p.id)}
-          aria-label={`Open ${p.name}`}
-        >
-          {/* Use the logic from PhaseProgressBar.jsx to decide if dot is green */}
-          {/* <span className={`phase-icon ${p.iconClass}`} /> */}
-          <span className={`phase-icon ${p.color || ''}`}>{p.icon}</span>
-          {/* <span className={`phase-dot ${completedSet.has(p.id.toUpperCase()) ? 'is-done' : ''}`} /> */}
-          <span className="phase-text">
-            <span className="phase-title">{p.name}</span>
-            <span className="phase-sub">{p.sub}</span>
-          </span>
-          {p.status === "active" && <span className="phase-active-ind" />}
-        </button>
-      ))}
-    </nav>
-  </aside>
+  //   <nav className="sidebar-phases">
+  //     {phases.map((p) => (
+  //       <button
+  //         key={p.id}
+  //         className={`phase-item ${p.status === "active" ? "is-active" : ""}`}
+  //         onClick={() => gotoPhase(p.id)}
+  //         aria-label={`Open ${p.name}`}
+  //       >
+  //         {/* Use the logic from PhaseProgressBar.jsx to decide if dot is green */}
+  //         {/* <span className={`phase-icon ${p.iconClass}`} /> */}
+  //         <span className={`phase-icon ${p.color || ''}`}>{p.icon}</span>
+  //         {/* <span className={`phase-dot ${completedSet.has(p.id.toUpperCase()) ? 'is-done' : ''}`} /> */}
+  //         <span className="phase-text">
+  //           <span className="phase-title">{p.name}</span>
+  //           <span className="phase-sub">{p.sub}</span>
+  //         </span>
+  //         {p.status === "active" && <span className="phase-active-ind" />}
+  //       </button>
+  //     ))}
+  //   </nav>
+  // </aside>
       
-      )}
+  //     )}
+
+  //sanju_02_04
+
+       <div className={`gac-page ${isFocusMode ? 'is-focus' : ''}`} data-page="gac">
+  {/* Sidebar */}
+  {!isFocusMode && (
+    <aside className="gac-sidebar">
+      {/* Match the SmartTM structure:
+         1. Header (Overall Progress + Percent)
+         2. Subtext (X of Y phases completed)
+         3. Progress Bar
+      */}
+      <div className="sidebar-header" style={{ opacity: isProgressLoading ? 0.6 : 1, transition: 'opacity 0.3s' }}>
+       
+        {/* Row 1: Label and Percentage */}
+        <div className="progress-row">
+          <span className="tm-progress-label">Overall Progress</span>
+          <span className="tm-progress-value">{isProgressLoading ? "..." : `${overallPercent}%`}</span>
+        </div>
+     
+        {/* Row 2: Subtext (Moved above the bar for consistency) */}
+        <div className="progress-sub" style={{ marginBottom: '8px' }}>
+          {isProgressLoading ? 'Loading...' : `${completedCount} of 4 phases completed`}
+        </div>
+ 
+        {/* Row 3: The Progress Bar (Using tm- classes for exact styling) */}
+        <div className="tm-progress-bar">
+          <div
+            className="tm-progress-fill"
+            style={{
+              width: `${overallPercent}%`,
+              transition: 'width 0.4s ease-out'
+            }}
+          />
+        </div>
+      </div>
+ 
+      <nav className="sidebar-phases">
+        {phases.map((p) => {
+          const isDone = completedSet.has(p.id.toUpperCase());
+ 
+          return (
+            <button
+              key={p.id}
+              className={`phase-item ${isDone ? "done" : p.status || ""} ${p.status === "active" ? "is-active" : ""}`}
+              onClick={() => gotoPhase(p.id)}
+              aria-label={`Open ${p.name}`}
+            >
+              <span className={`phase-icon ${p.color || ''}`}>{p.icon}</span>
+             
+              <span className="phase-text">
+                <span className="phase-title">{p.name}</span>
+                <span className="phase-sub">{p.sub}</span>
+              </span>
+ 
+              {/* Checkmark for completed phases */}
+              {isDone && !isProgressLoading && <span className="phase-check">✓</span>}
+             
+              {/* Active dot indicator */}
+              {p.status === "active" && !isDone && !isProgressLoading && <span className="phase-active-ind" />}
+            </button>
+          );
+        })}
+      </nav>
+    </aside>
+  )}
+ 
+ 
+ 
 
       {/* Content Area */}
       <main className="gac-main">

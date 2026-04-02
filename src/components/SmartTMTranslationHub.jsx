@@ -130,8 +130,8 @@ const saveTranslationToDb = async (source, target, sLang, tLang, docName) => {
 };
 
 // For quick test you can uncomment and set directly:
-const N8N_WEBHOOK_URL = "http://172.16.4.237:8016/webhook/csv_upload";
-const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8016/webhook/csv_upload_bulk";
+const N8N_WEBHOOK_URL = "http://172.16.4.237:8031/webhook/csv_upload";
+const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8031/webhook/csv_upload_bulk";
 
 // const N8N_WEBHOOK_URL = "http://172.16.4.237:8015/webhook-test/csv_upload";
 // const N8N_BULK_WEBHOOK_URL = "http://172.16.4.237:8015/webhook-test/csv_upload_bulk";
@@ -2025,7 +2025,7 @@ useEffect(() => {
       // ---------------------------------------------------------
       console.log("🧠 Checking TM for all segments...");
       
-      const lookupRes = await fetch("http://127.0.0.1:8000/api/smart-tm-lookup-bulk", {
+      const lookupRes = await fetch("https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/smart-tm-lookup-bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2178,7 +2178,7 @@ useEffect(() => {
 
       if (itemsToSave.length > 0) {
         // Non-blocking DB save
-        fetch("http://127.0.0.1:8000/api/translated-content/bulk", {
+        fetch("https://9hrpycs3g5.execute-api.us-east-1.amazonaws.com/Prod/api/translated-content/bulk", {
              method: "POST",
              headers: { "Content-Type": "application/json" },
              body: JSON.stringify({ items: itemsToSave })

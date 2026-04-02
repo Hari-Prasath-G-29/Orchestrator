@@ -2024,7 +2024,7 @@ const canMarkReviewed = !!adaptedTextForSelected && !isReviewedForSelected && !i
  
     // --- 2. SEND TO PYTHON ---
 
-    const response = await fetch('http://localhost:5000/generate-pdf', {
+    const response = await fetch('https://dtp6ldhkce.execute-api.us-east-1.amazonaws.com/generate-pdf', {
 
       method: 'POST',
 

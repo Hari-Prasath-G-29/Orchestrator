@@ -7253,4 +7253,26 @@ html, body, #root {
     margin-right: 8px;
 }
 
+/* //sanju_02_04 */
+
+/* Styles the checkmark and pushes it to the far right */
+.phase-check {
+  color: #10B981; /* Ensure this hex matches the green used in .tm-phase-check */
+  font-size: 16px;
+  font-weight: bold;
+  margin-left: auto; /* Critical: Pushes the checkmark to the right edge */
+  display: flex;
+  align-items: center;
+}
+ 
+/* Optional: Turns the left-side icon green when the phase is completed */
+.phase-item.done .phase-icon {
+  color: #10B981;
+}
+ 
+/* Ensures the blue active dot also stays pushed to the right edge */
+.phase-active-ind {
+  margin-left: auto;
+}
+
 
